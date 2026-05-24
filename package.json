@@ -1,0 +1,23 @@
+{
+  "name": "nebula-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node deploy-commands.js && node index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "npx prettier . --write",
+    "deploy": "node deploy-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2",
+    "google-auth-library": "^10.6.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "3.8.3"
+  }
+}
