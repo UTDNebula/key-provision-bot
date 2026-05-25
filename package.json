@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node deploy-commands.js && node index.js",
+    "start": "node deploy-commands.ts && node index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "npx prettier . --write",
-    "deploy": "node deploy-commands.js"
+    "deploy": "node deploy-commands.ts"
   },
   "dependencies": {
     "discord.js": "^14.26.4",

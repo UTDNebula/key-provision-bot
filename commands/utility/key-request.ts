@@ -1,27 +1,29 @@
 import { SlashCommandBuilder } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
+import type { Command } from "../../interface.ts";
 
 /**
- * Backoff for 10 seconds, used for polling
+ * Backoff for 10 seconds, used for polling the key for operations
  */
-function backoff() {
+function backoff(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 10000));
 }
 
 /**
- * Get access token
+ * Get access token to call keys API
  */
-async function getBearerToken() {
+async function getBearerToken(): Promise<string | null> {
   const auth = new GoogleAuth({
     scopes: "https://www.googleapis.com/auth/cloud-platform",
   });
   try {
     const client = await auth.getClient();
     const response = await client.getAccessToken();
-    return response.token;
+    return response.token ?? null;
   } catch (error) {
-    console.error(`Error getting access token: ${error.message}`);
+    const message = error instanceof Error ? error.message : "Unknown";
+    console.error(`Error getting access token: ${message}`);
     return null;
   }
 }
@@ -32,7 +34,7 @@ async function getBearerToken() {
  * Refer to https://docs.cloud.google.com/api-keys/docs/create-manage-api-keys on how to
  * create Google Cloud API key through REST.
  */
-async function provisionKey(name) {
+async function provisionKey(name: string): Promise<string | null> {
   const API_KEY_URL = `https://apikeys.googleapis.com/v2`;
 
   const PROJECT_ID = process.env.NEBULA_API_PROJECT_ID;
@@ -81,10 +83,10 @@ async function provisionKey(name) {
     return null;
   }
   const data = await response.json();
-  const operation = data.name;
+  const operation: string = data.name;
 
   // Poll the operations until we get the key
-  let keyDetails = {};
+  let keyDetails: any = {};
   while (!("done" in keyDetails && keyDetails.done == true)) {
     await backoff();
 
@@ -107,7 +109,7 @@ async function provisionKey(name) {
 /**
  * Command responding to key's request
  */
-const keyRequestCommand = {
+const keyRequestCommand: Command = {
   data: new SlashCommandBuilder()
     .setName("key_request")
     .setDescription("Provision the API key to the user upon request"),
@@ -119,7 +121,7 @@ const keyRequestCommand = {
     const key = await provisionKey(interaction.user.username);
     const message =
       key !== null
-        ? `Your key is ||${key}||. Happy coding!`
+        ? `Your key is ||${key}||. Happy coding! If you have any question, DM Mike directly!`
         : `Error! Please re-request your key in Nebula Labs server`;
     interaction.user.send(message);
   },

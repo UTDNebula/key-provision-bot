@@ -6,12 +6,20 @@ import {
   MessageFlags,
 } from "discord.js";
 import "dotenv/config";
-import { getCommands } from "./utils.js";
+import { getCommands } from "./utils.ts";
+import type { DiscordClient } from "./interface.ts";
+
+/*
+TODO:
+- Cooldowns to avoid spamming,
+- Refactor the file structure,
+- Message-based commands
+ */
 
 // Init the Discord client from the token
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages],
-});
+}) as DiscordClient;
 
 client.commands = new Collection();
 for (const command of await getCommands()) {
@@ -25,7 +33,9 @@ client.once(Events.ClientReady, (readyClient) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
-  const command = interaction.client.commands.get(interaction.commandName);
+
+  const interactionClient = interaction.client as DiscordClient;
+  const command = interactionClient.commands.get(interaction.commandName);
   if (!command) {
     console.error(`${interaction.commandName} not found!`);
     return;
