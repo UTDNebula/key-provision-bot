@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "discord": "tsx deploy-commands.ts && tsx index.ts",
+    "discord": "tsx src/deploy-commands.ts && tsx src/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "npx prettier . --write",
-    "deploy": "tsx deploy-commands.ts"
+    "deploy": "tsx src/deploy-commands.ts"
   },
   "dependencies": {
     "discord.js": "^14.26.4",
