@@ -2,11 +2,13 @@ import { getCommands } from "@/utils.ts";
 import type { DiscordClient } from "@/interface.ts";
 import "dotenv/config";
 import {
+  ActivityType,
   Client,
   Collection,
   Events,
   GatewayIntentBits,
   MessageFlags,
+  PresenceUpdateStatus,
 } from "discord.js";
 
 const discordToken = process.env.DISCORD_TOKEN;
@@ -27,6 +29,15 @@ for (const command of await getCommands()) {
 
 // Configure the client
 client.once(Events.ClientReady, (readyClient) => {
+  // Upon startup, set the bot to be online
+  if (client.user) {
+    client.user!.setPresence({
+      activities: [{ name: "Provide API key", type: ActivityType.Custom }],
+      status: PresenceUpdateStatus.Online,
+    });
+  } else {
+    console.log("Bot wasn't set online when starting up...");
+  }
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
@@ -44,16 +55,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const bot = interaction.client.user;
     if (commandName !== "sleep_or_wake" && bot.presence.status !== "online") {
       // If the bot is offline, user can't command it to do anything
-      // other than admin waking it up.
+      // other than admin command to wake the bot up.
 
       const user = interaction.user;
-      await interaction.reply({
-        content: `Hello <@${user.id}>! I'm currently offline, please comeback later.`,
-        flags: MessageFlags.Ephemeral,
-      });
-    } else {
-      await command.execute(interaction);
-    }
+      await interaction.reply(
+        `Hello <@${user.id}>! I'm currently offline, please comeback later.`,
+      );
+      return;
+    } 
+
+    await command.execute(interaction);
   } catch (error) {
     console.error(error);
     if (interaction.replied || interaction.deferred) {
