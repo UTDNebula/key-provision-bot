@@ -1,13 +1,13 @@
 import { SlashCommandBuilder } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
-import type { Command } from "../../interface.ts";
+import type { Command } from "@/interface.ts";
 
 /**
- * Backoff for 10 seconds, used for polling the key for operations
+ * Backoff for number of seconds, used for polling the key for operations
  */
-function backoff(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 10000));
+function backoff(dur: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, dur * 1000));
 }
 
 type APIConfig = {
@@ -18,20 +18,18 @@ type APIConfig = {
 };
 
 /**
- * Get config for API calling
+ * Get config for API, including URL, project's ID, service, token.
  */
-async function getAPIConfig(): Promise<APIConfig | null> {
+async function getAPIConfig(): Promise<APIConfig> {
   const baseUrl = `https://apikeys.googleapis.com/v2`;
 
   const projectID = process.env.NEBULA_API_PROJECT_ID;
   if (typeof projectID !== "string") {
-    console.error("Undefined project ID");
-    return null;
+    throw new Error("Undefined NEBULA_API_PROJECT_ID");
   }
   const service = process.env.NEBULA_API_SERVICE;
   if (typeof service !== "string") {
-    console.error("Undefined project service");
-    return null;
+    throw new Error("Undefined NEBULA_API_SERVICE");
   }
 
   let accessToken: string;
@@ -43,14 +41,12 @@ async function getAPIConfig(): Promise<APIConfig | null> {
     const client = await auth.getClient();
     const response = await client.getAccessToken();
     if (typeof response.token !== "string") {
-      console.error("Undefined bearer token");
-      return null;
+      throw new Error("Undefined access token");
     }
     accessToken = response.token;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown";
-    console.error(`Error getting access token: ${message}`);
-    return null;
+    const message = error instanceof Error ? error.message : "Unknown cause";
+    throw new Error(`Error getting access token: ${message}`);
   }
 
   return {
@@ -65,13 +61,12 @@ async function getAPIConfig(): Promise<APIConfig | null> {
  * Check if this user has a provisioned key and returns the key.
  * Otherwise, returns an empty string.
  * If there's other HTTP errors while checking, returns null.
+ *
+ * Refer to https://docs.cloud.google.com/api-keys/docs/get-info-api-keys
  */
-async function checkExistingKey(userId: string): Promise<string | null> {
-  const APIConfig = await getAPIConfig();
-  if (!APIConfig) {
-    return null;
-  }
-  const { baseUrl, projectID, accessToken } = APIConfig;
+async function checkExistingKey(userId: string): Promise<string> {
+  const { baseUrl, projectID, accessToken } = await getAPIConfig();
+
   const keyName = `projects/${projectID}/locations/global/keys/proj-${userId}`;
   const response = await fetch(`${baseUrl}/${keyName}/keyString`, {
     method: "GET",
@@ -84,10 +79,10 @@ async function checkExistingKey(userId: string): Promise<string | null> {
     return "";
   }
   if (!response.ok) {
-    console.error(`Error ${response.status} checking key!`);
-    return null;
+    throw new Error(`HTTP error ${response.status} checking key!`);
   }
   const data = await response.json();
+
   return data.keyString;
 }
 
@@ -97,12 +92,8 @@ async function checkExistingKey(userId: string): Promise<string | null> {
  * Refer to https://docs.cloud.google.com/api-keys/docs/create-manage-api-keys on
  * how to create Google Cloud API key through REST.
  */
-async function provisionKey(userId: string): Promise<string | null> {
-  const APIConfig = await getAPIConfig();
-  if (!APIConfig) {
-    return null;
-  }
-  const { baseUrl, projectID, service, accessToken } = APIConfig;
+async function generateNewKey(userId: string): Promise<string> {
+  const { baseUrl, projectID, service, accessToken } = await getAPIConfig();
 
   // Define the name and restrict the key to only use Nebula API
   const nameAndRestrictions = {
@@ -131,16 +122,15 @@ async function provisionKey(userId: string): Promise<string | null> {
     },
   );
   if (!response.ok) {
-    console.error(`Error ${response.status} creating key!`);
-    return null;
+    throw new Error(`HTTP error ${response.status} creating key!`);
   }
   const data = await response.json();
   const operation: string = data.name;
 
   // Poll the operations until we get the key
   let keyDetails: any = {};
-  while (!("done" in keyDetails && keyDetails.done == true)) {
-    await backoff();
+  while (!("done" in keyDetails && keyDetails.done === true)) {
+    await backoff(10);
 
     response = await fetch(`${baseUrl}/${operation}`, {
       method: "GET",
@@ -150,23 +140,13 @@ async function provisionKey(userId: string): Promise<string | null> {
       },
     });
     if (!response.ok) {
-      console.error(`Error ${response.status} polling key!`);
-      return null;
+      throw new Error(`HTTP error ${response.status} polling key!`);
     }
     keyDetails = await response.json();
   }
+
   return keyDetails.response.keyString;
 }
-
-function newKeyMessage(key: string) {
-  return `Your new key is ||${key}||. Happy coding! If you have any question, please DM Mike.`;
-}
-
-function existingKeyMessage(key: string) {
-  return `You have been provisioned a key. Your key is ||${key}||. If you have any question, please DM Mike.`;
-}
-
-const errorMessage = "Error! Please re-request your key in Nebula Labs server";
 
 /**
  * Command responding to key's request
@@ -176,22 +156,20 @@ const keyRequestCommand: Command = {
     .setName("key_request")
     .setDescription("Provision the API key to the user upon request"),
   async execute(interaction) {
-    await interaction.reply(
-      `Hello <@${interaction.user.id}>! Please check your DM later.`,
-    );
-    let key = await checkExistingKey(interaction.user.id);
-    if (key !== null) {
-      if (key !== "") {
-        interaction.user.send(existingKeyMessage(key));
-        return;
-      }
-    } else {
-      interaction.user.send(errorMessage);
+    const user = interaction.user;
+
+    await interaction.reply(`Hello <@${user.id}>! Please check your DM later.`);
+    const existingKey = await checkExistingKey(interaction.user.id);
+    if (existingKey !== "") {
+      await user.send(
+        `You have been provisioned a key. Your key is ||${existingKey}||. If you have any question, please DM Mike.`,
+      );
       return;
     }
-    key = await provisionKey(interaction.user.id);
-    const message = key !== null ? newKeyMessage(key) : errorMessage;
-    interaction.user.send(message);
+    const newKey = await generateNewKey(user.id);
+    await user.send(
+      `Your new key is ||${newKey}||. Happy coding! If you have any question, please DM Mike.`,
+    );
   },
 };
 

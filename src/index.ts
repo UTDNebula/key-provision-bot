@@ -1,3 +1,6 @@
+import { getCommands } from "@/utils.ts";
+import type { DiscordClient } from "@/interface.ts";
+import "dotenv/config";
 import {
   Client,
   Collection,
@@ -5,16 +8,12 @@ import {
   GatewayIntentBits,
   MessageFlags,
 } from "discord.js";
-import "dotenv/config";
-import { getCommands } from "./utils.ts";
-import type { DiscordClient } from "./interface.ts";
 
-/*
-TODO:
-- Cooldowns to avoid spamming,
-- Refactor the file structure,
-- Message-based commands
- */
+const discordToken = process.env.DISCORD_TOKEN;
+if (!discordToken) {
+  console.error("Undefined DISCORD_TOKEN. Program terminating.");
+  process.exit(1);
+}
 
 // Init the Discord client from the token
 const client = new Client({
@@ -28,20 +27,33 @@ for (const command of await getCommands()) {
 
 // Configure the client
 client.once(Events.ClientReady, (readyClient) => {
-  console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+  console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   const interactionClient = interaction.client as DiscordClient;
-  const command = interactionClient.commands.get(interaction.commandName);
+  const commandName = interaction.commandName;
+  const command = interactionClient.commands.get(commandName);
   if (!command) {
-    console.error(`${interaction.commandName} not found!`);
+    console.error(`${commandName} not found!`);
     return;
   }
   try {
-    await command.execute(interaction);
+    const bot = interaction.client.user;
+    if (commandName !== "sleep_or_wake" && bot.presence.status !== "online") {
+      // If the bot is offline, user can't command it to do anything
+      // other than admin waking it up.
+
+      const user = interaction.user;
+      await interaction.reply({
+        content: `Hello <@${user.id}>! I'm currently offline, please comeback later.`,
+        flags: MessageFlags.Ephemeral,
+      });
+    } else {
+      await command.execute(interaction);
+    }
   } catch (error) {
     console.error(error);
     if (interaction.replied || interaction.deferred) {
@@ -59,4 +71,4 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 // Login discord
-client.login(process.env.DISCORD_TOKEN ?? "");
+client.login(discordToken);
