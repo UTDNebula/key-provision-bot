@@ -7,12 +7,12 @@ import {
 import type { Command } from "@/interface.ts";
 
 /**
- * Command to go invisible, or online. 
+ * Command to go invisible, or online.
  * Only the admin has the permsision to command it to sleep or wake up.
  */
 const sleepWakeCommand: Command = {
   data: new SlashCommandBuilder()
-    .setName("sleep_or_wake")
+    .setName("sleep-or-wake")
     .setDescription("Sleep or wake the key provision bot")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {

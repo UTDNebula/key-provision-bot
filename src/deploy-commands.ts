@@ -8,8 +8,8 @@ if (!discordToken) {
   process.exit(1);
 }
 
-const clientID = process.env.CLIENT_ID;
-if (!clientID) {
+const clientId = process.env.CLIENT_ID;
+if (!clientId) {
   console.error("Undefined CLIENT_ID. Program terminating.");
   process.exit(1);
 }
@@ -27,7 +27,7 @@ async function deployCommands() {
     console.log(`Reloading ${serializedCommands.length} commands...`);
 
     // Reload all commands
-    const data: any = await rest.put(Routes.applicationCommands(clientID!), {
+    const data: any = await rest.put(Routes.applicationCommands(clientId!), {
       body: serializedCommands,
     });
 

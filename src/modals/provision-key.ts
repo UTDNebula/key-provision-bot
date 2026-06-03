@@ -1,7 +1,8 @@
-import { SlashCommandBuilder } from "discord.js";
+import { ModalSubmitInteraction } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
-import type { Command } from "@/interface.ts";
+import { KeyProvision, ModalSubmit } from "@/interface.ts";
+import { getKeyProvisionCollection } from "@/utils.ts";
 
 /**
  * Backoff for number of seconds, used for polling the key for operations
@@ -10,9 +11,23 @@ function backoff(dur: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, dur * 1000));
 }
 
+/**
+ * Check if this user has a provisioned key and returns the key.
+ * Otherwise, returns an empty string.
+ */
+async function checkExistingKey(userId: string): Promise<string> {
+  const collection = await getKeyProvisionCollection();
+
+  const doc = await collection.findOne({ userId: userId });
+  if (!doc){
+    return ""
+  }
+  return doc.key
+}
+
 type APIConfig = {
   baseUrl: string;
-  projectID: string;
+  projectId: string;
   service: string;
   accessToken: string;
 };
@@ -23,12 +38,12 @@ type APIConfig = {
 async function getAPIConfig(): Promise<APIConfig> {
   const baseUrl = `https://apikeys.googleapis.com/v2`;
 
-  const projectID = process.env.NEBULA_API_PROJECT_ID;
-  if (typeof projectID !== "string") {
+  const projectId = process.env.NEBULA_API_PROJECT_ID;
+  if (!projectId) {
     throw new Error("Undefined NEBULA_API_PROJECT_ID");
   }
   const service = process.env.NEBULA_API_SERVICE;
-  if (typeof service !== "string") {
+  if (!service) {
     throw new Error("Undefined NEBULA_API_SERVICE");
   }
 
@@ -40,7 +55,7 @@ async function getAPIConfig(): Promise<APIConfig> {
     // The token is cached, so we can call function multiple times and still get same token
     const client = await auth.getClient();
     const response = await client.getAccessToken();
-    if (typeof response.token !== "string") {
+    if (!response.token) {
       throw new Error("Undefined access token");
     }
     accessToken = response.token;
@@ -51,39 +66,10 @@ async function getAPIConfig(): Promise<APIConfig> {
 
   return {
     baseUrl,
-    projectID,
+    projectId,
     service,
     accessToken,
   } as APIConfig;
-}
-
-/**
- * Check if this user has a provisioned key and returns the key.
- * Otherwise, returns an empty string.
- * If there's other HTTP errors while checking, returns null.
- *
- * Refer to https://docs.cloud.google.com/api-keys/docs/get-info-api-keys
- */
-async function checkExistingKey(userId: string): Promise<string> {
-  const { baseUrl, projectID, accessToken } = await getAPIConfig();
-
-  const keyName = `projects/${projectID}/locations/global/keys/proj-${userId}`;
-  const response = await fetch(`${baseUrl}/${keyName}/keyString`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "x-goog-user-project": projectID,
-    },
-  });
-  if (response.status === 404) {
-    return "";
-  }
-  if (!response.ok) {
-    throw new Error(`HTTP error ${response.status} checking key!`);
-  }
-  const data = await response.json();
-
-  return data.keyString;
 }
 
 /**
@@ -92,12 +78,17 @@ async function checkExistingKey(userId: string): Promise<string> {
  * Refer to https://docs.cloud.google.com/api-keys/docs/create-manage-api-keys on
  * how to create Google Cloud API key through REST.
  */
-async function generateNewKey(userId: string): Promise<string> {
-  const { baseUrl, projectID, service, accessToken } = await getAPIConfig();
+async function generateNewKey(
+  userId: string,
+  username: string,
+  project: string,
+  description: string,
+): Promise<string> {
+  const { baseUrl, projectId, service, accessToken } = await getAPIConfig();
 
-  // Define the name and restrict the key to only use Nebula API
-  const nameAndRestrictions = {
-    displayName: `proj-${userId}`,
+  // Define the display name and restrict the key to only use Nebula API
+  const body = {
+    displayName: `${username}/${project}`,
     restrictions: {
       api_targets: [
         {
@@ -106,19 +97,16 @@ async function generateNewKey(userId: string): Promise<string> {
       ],
     },
   };
-
-  // userId is unique identifier of Discord user, so should be good
-  const keyId = `proj-${userId}`;
   let response = await fetch(
-    `${baseUrl}/projects/${projectID}/locations/global/keys?keyId=${keyId}`,
+    `${baseUrl}/projects/${projectId}/locations/global/keys`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         Authorization: `Bearer ${accessToken}`,
-        "x-goog-user-project": projectID,
+        "x-goog-user-project": projectId,
       },
-      body: JSON.stringify(nameAndRestrictions),
+      body: JSON.stringify(body),
     },
   );
   if (!response.ok) {
@@ -136,7 +124,7 @@ async function generateNewKey(userId: string): Promise<string> {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "x-goog-user-project": projectID,
+        "x-goog-user-project": projectId,
       },
     });
     if (!response.ok) {
@@ -145,32 +133,54 @@ async function generateNewKey(userId: string): Promise<string> {
     keyDetails = await response.json();
   }
 
+  // Save the provision record to the database
+  const collection = await getKeyProvisionCollection();
+  const doc = {
+      userId: userId,
+      username: username,
+      project: project,
+      description: description,
+      key: keyDetails.response.keyString,
+    } as KeyProvision;
+
+  const insertedDoc = await collection.insertOne(doc);
+  if (!insertedDoc.acknowledged) {
+    throw new Error("Error inserting provision to DB");
+  }
+
   return keyDetails.response.keyString;
 }
 
 /**
- * Command responding to key's request
+ * Responding to user submissions the form
  */
-const keyRequestCommand: Command = {
-  data: new SlashCommandBuilder()
-    .setName("key_request")
-    .setDescription("Provision the API key to the user upon request"),
-  async execute(interaction) {
+const provisionKeyModalSubmit: ModalSubmit = {
+  customId: "requestKeyForm",
+  execute: async (interaction: ModalSubmitInteraction) => {
     const user = interaction.user;
+    const fields = interaction.fields;
 
-    await interaction.reply(`Hello <@${user.id}>! Please check your DM later.`);
-    const existingKey = await checkExistingKey(interaction.user.id);
-    if (existingKey !== "") {
+    await interaction.reply(
+      `Hello <@${user.id}>! We received your request. We'll DM you later.`,
+    );
+
+    let key = await checkExistingKey(user.id);
+    if (key !== "") {
       await user.send(
-        `You have been provisioned a key. Your key is ||${existingKey}||. If you have any question, please DM Mike.`,
+        `You have been provisioned a key. Your key is ||${key}||. If you have any question, please DM Mike.`,
       );
       return;
     }
-    const newKey = await generateNewKey(user.id);
+    key = await generateNewKey(
+      user.id,
+      user.username,
+      fields.getTextInputValue("projName"),
+      fields.getTextInputValue("projDescription"),
+    );
     await user.send(
-      `Your new key is ||${newKey}||. Happy coding! If you have any question, please DM Mike.`,
+      `Your new key is ||${key}||. Happy coding! If you have any question, please DM Mike.`,
     );
   },
 };
 
-export default keyRequestCommand;
+export default provisionKeyModalSubmit;

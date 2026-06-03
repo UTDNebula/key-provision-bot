@@ -1,4 +1,4 @@
-import { getCommands } from "@/utils.ts";
+import { getCommands, getModalSubmits, getClient } from "@/utils.ts";
 import type { DiscordClient } from "@/interface.ts";
 import "dotenv/config";
 import {
@@ -17,21 +17,29 @@ if (!discordToken) {
   process.exit(1);
 }
 
+// Setup connection with the database
+await getClient();
+
 // Init the Discord client from the token
-const client = new Client({
+const discordClient = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages],
 }) as DiscordClient;
 
-client.commands = new Collection();
+discordClient.commands = new Collection();
 for (const command of await getCommands()) {
-  client.commands.set(command.data.name, command);
+  discordClient.commands.set(command.data.name, command);
 }
 
-// Configure the client
-client.once(Events.ClientReady, (readyClient) => {
+discordClient.modalSubmits = new Collection();
+for (const modal of await getModalSubmits()) {
+  discordClient.modalSubmits.set(modal.customId, modal);
+}
+
+
+discordClient.once(Events.ClientReady, (readyClient) => {
   // Upon startup, set the bot to be online
-  if (client.user) {
-    client.user!.setPresence({
+  if (discordClient.user) {
+    discordClient.user!.setPresence({
       activities: [{ name: "Provide API key", type: ActivityType.Custom }],
       status: PresenceUpdateStatus.Online,
     });
@@ -41,7 +49,8 @@ client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
-client.on(Events.InteractionCreate, async (interaction) => {
+// Executing the slash commands
+discordClient.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   const interactionClient = interaction.client as DiscordClient;
@@ -51,30 +60,62 @@ client.on(Events.InteractionCreate, async (interaction) => {
     console.error(`${commandName} not found!`);
     return;
   }
+
   try {
     const bot = interaction.client.user;
+    // If the bot is offline, user can't command it to do anything
+    // except for admin waking it up
     if (commandName !== "sleep_or_wake" && bot.presence.status !== "online") {
-      // If the bot is offline, user can't command it to do anything
-      // other than admin command to wake the bot up.
-
       const user = interaction.user;
-      await interaction.reply(
-        `Hello <@${user.id}>! I'm currently offline, please comeback later.`,
-      );
+      await interaction.reply({
+        content: `Hello <@${user.id}>! I'm currently offline, please comeback later.`,
+        flags: MessageFlags.Ephemeral,
+      });
       return;
-    } 
-
+    }
     await command.execute(interaction);
   } catch (error) {
     console.error(error);
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp({
-        content: "There was an error while executing this command!",
+        content: "Error while executing this command!",
         flags: MessageFlags.Ephemeral,
       });
     } else {
       await interaction.reply({
-        content: "There was an error while executing this command!",
+        content: "Error while executing this command!",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+  }
+});
+
+// Executing the modal submit interactions
+discordClient.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isModalSubmit()) return;
+
+  const interactionClient = interaction.client as DiscordClient;
+  const customId = interaction.customId;
+  const modalSubmit = interactionClient.modalSubmits.get(customId);
+  if (!modalSubmit) {
+    console.error(`Modal ${customId} not found!`);
+    return;
+  }
+
+  try {
+    // Modal only pops up after slash command's execution which will not be executed when bot is offline,
+    // no need to check for bot's status.
+    await modalSubmit.execute(interaction);
+  } catch (error) {
+    console.error(error);
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({
+        content: "Error while executing this modal submit!",
+        flags: MessageFlags.Ephemeral,
+      });
+    } else {
+      await interaction.reply({
+        content: "Error while executing this modal submit!",
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -82,4 +123,4 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 // Login discord
-client.login(discordToken);
+discordClient.login(discordToken);
