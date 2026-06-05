@@ -17,16 +17,17 @@ const sleepWakeCommand: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     const bot = interaction.client.user;
-
     if (bot.presence.status === "online") {
       bot.setPresence({
-        activities: [{ name: "Sleep", type: ActivityType.Custom }],
+        activities: [{ name: "Sleeping...", type: ActivityType.Custom }],
         status: PresenceUpdateStatus.Invisible,
       });
       await interaction.reply("I'm going offline now. Goodbye everyone!");
     } else {
       bot.setPresence({
-        activities: [{ name: "Provide API Key", type: ActivityType.Custom }],
+        activities: [
+          { name: "Provisioning API Key...", type: ActivityType.Custom },
+        ],
         status: PresenceUpdateStatus.Online,
       });
       await interaction.reply(

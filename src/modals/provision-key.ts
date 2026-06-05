@@ -3,12 +3,42 @@ import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
 import { KeyProvision, ModalSubmit } from "@/interface.ts";
 import { getKeyProvisionCollection } from "@/utils.ts";
+import CryptoJS from "crypto-js";
+import { randomBytes } from "node:crypto";
+import { execSync } from "node:child_process";
 
 /**
  * Backoff for number of seconds, used for polling the key for operations
  */
 function backoff(dur: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, dur * 1000));
+}
+
+/**
+ * Encrypt the provisioned API key using AES-256 algorithm
+ */
+function encryptAPIKey(apiKey: string): string {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    throw new Error("Undefined ENCRYPTION_KEY");
+  }
+
+  const dbKey = CryptoJS.AES.encrypt(apiKey, encryptionKey);
+  return dbKey.toString();
+}
+
+/**
+ * Decrypt the key stored in DB into the actual API key
+ */
+function decryptAPIKey(dbKey: string): string {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    throw new Error("Undefined ENCRYPTION_KEY");
+  }
+
+  const bytes = CryptoJS.AES.decrypt(dbKey, encryptionKey);
+  const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+  return decrypted;
 }
 
 /**
@@ -19,10 +49,10 @@ async function checkExistingKey(userId: string): Promise<string> {
   const collection = await getKeyProvisionCollection();
 
   const doc = await collection.findOne({ userId: userId });
-  if (!doc){
-    return ""
+  if (!doc) {
+    return "";
   }
-  return doc.key
+  return decryptAPIKey(doc.key);
 }
 
 type APIConfig = {
@@ -33,7 +63,7 @@ type APIConfig = {
 };
 
 /**
- * Get config for API, including URL, project's ID, service, token.
+ * Get config for API calling, including URL, project's ID, service, token.
  */
 async function getAPIConfig(): Promise<APIConfig> {
   const baseUrl = `https://apikeys.googleapis.com/v2`;
@@ -60,8 +90,7 @@ async function getAPIConfig(): Promise<APIConfig> {
     }
     accessToken = response.token;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown cause";
-    throw new Error(`Error getting access token: ${message}`);
+    throw new Error("Error getting access token", { cause: error });
   }
 
   return {
@@ -73,16 +102,14 @@ async function getAPIConfig(): Promise<APIConfig> {
 }
 
 /**
- * Provision the new API key for this user.
+ * Create new key in Google Cloud
  *
  * Refer to https://docs.cloud.google.com/api-keys/docs/create-manage-api-keys on
- * how to create Google Cloud API key through REST.
+ * how to create Google Cloud API key through REST
  */
-async function generateNewKey(
-  userId: string,
+async function prodCreateKey(
   username: string,
   project: string,
-  description: string,
 ): Promise<string> {
   const { baseUrl, projectId, service, accessToken } = await getAPIConfig();
 
@@ -115,7 +142,7 @@ async function generateNewKey(
   const data = await response.json();
   const operation: string = data.name;
 
-  // Poll the operations until we get the key
+  // Poll the operations until user gets the key
   let keyDetails: any = {};
   while (!("done" in keyDetails && keyDetails.done === true)) {
     await backoff(10);
@@ -133,22 +160,56 @@ async function generateNewKey(
     keyDetails = await response.json();
   }
 
+  return keyDetails.response.keyString;
+}
+
+/**
+ * Test version of `createKey`, used in dev environment to avoid hitting GCloud.
+ * This just generates random key.
+ */
+async function devCreateKey(
+  username: string,
+  project: string,
+): Promise<string> {
+  const GCLOUD_KEY_BYTES = 36;
+  return randomBytes(GCLOUD_KEY_BYTES).toString("hex");
+}
+
+/**
+ * Provision the new API key for this user, including:
+ * - Create new key in Google Cloud
+ * - Encrypt the created key and store key's info to Mongo DB
+ */
+async function provisionNewKey(
+  userId: string,
+  username: string,
+  project: string,
+  description: string,
+): Promise<string> {
+  const branch = execSync("git rev-parse --abbrev-ref HEAD", {
+    encoding: "utf8",
+  }).trim();
+  const newKey =
+    branch === "master"
+      ? await prodCreateKey(username, project)
+      : await devCreateKey(username, project);
+
   // Save the provision record to the database
   const collection = await getKeyProvisionCollection();
   const doc = {
-      userId: userId,
-      username: username,
-      project: project,
-      description: description,
-      key: keyDetails.response.keyString,
-    } as KeyProvision;
+    userId: userId,
+    username: username,
+    project: project,
+    description: description,
+    key: encryptAPIKey(newKey),
+  } as KeyProvision;
 
   const insertedDoc = await collection.insertOne(doc);
   if (!insertedDoc.acknowledged) {
     throw new Error("Error inserting provision to DB");
   }
 
-  return keyDetails.response.keyString;
+  return newKey;
 }
 
 /**
@@ -171,7 +232,7 @@ const provisionKeyModalSubmit: ModalSubmit = {
       );
       return;
     }
-    key = await generateNewKey(
+    key = await provisionNewKey(
       user.id,
       user.username,
       fields.getTextInputValue("projName"),
