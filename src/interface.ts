@@ -37,7 +37,7 @@ export interface DiscordClient extends Client {
  * Information about the key's provision
  */
 export type KeyProvision = {
-  userId: string; // Unique identifier of Discord user
+  userId: string;
   username: string;
   project: string;
   description: string;

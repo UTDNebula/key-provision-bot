@@ -31,6 +31,7 @@ export async function getCommands(): Promise<Command[]> {
       }
     }
   }
+
   return commands;
 }
 
@@ -58,30 +59,26 @@ export async function getModalSubmits(): Promise<ModalSubmit[]> {
   return modalSubmits;
 }
 
-const mongoURL = process.env.MONGO_URL;
-if (!mongoURL) {
-  console.error("Undefined MONGO_URL. Program terminating.");
-  process.exit(1);
-}
-const mongoClient = new MongoClient(mongoURL);
 let cachedConnection: Promise<MongoClient> | null = null;
 /**
- * Cache the connection to Mongo DB
+ * Connect to DB, and cache the connection
  */
 export async function getClient(): Promise<MongoClient> {
-  try {
-    if (!cachedConnection) {
-      console.log("Successfully connected to MongoDB!");
-      cachedConnection = mongoClient.connect();
+  if (!cachedConnection) {
+    const mongoURL = process.env.MONGO_URL;
+    if (!mongoURL) {
+      throw new Error("Undefined MONGO_URL");
     }
-    return cachedConnection;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown";
-    console.error(
-      `Error connecting to MongoDB ${message}. Program terminating.`,
-    );
-    process.exit(1);
+    const mongoClient = new MongoClient(mongoURL);
+    cachedConnection = mongoClient.connect().catch((err) => {
+      // Clear the cached connection and throw error
+      cachedConnection = null;
+      throw err;
+    });
+    console.log("Successfully connected to MongoDB!");
   }
+
+  return cachedConnection;
 }
 
 /**
@@ -94,12 +91,12 @@ export async function getKeyProvisionCollection(): Promise<
   if (!dbName) {
     throw new Error("Undefined DATABASE_NAME");
   }
-  const keyColName = process.env.KEY_COL_NAME;
-  if (!keyColName) {
+  const colName = process.env.KEY_COL_NAME;
+  if (!colName) {
     throw new Error("Undefined KEY_COL_NAME");
   }
 
   // Get the cached connection to the database
   const client = await getClient();
-  return client.db(dbName).collection<KeyProvision>(keyColName);
+  return client.db(dbName).collection<KeyProvision>(colName);
 }
