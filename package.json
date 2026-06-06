@@ -4,20 +4,27 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "discord": "node deploy-commands.ts && node index.ts",
+    "discord": "tsx src/deploy-commands.ts && tsx src/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "npx prettier . --write",
-    "deploy": "node deploy-commands.ts"
+    "deploy": "tsx src/deploy-commands.ts"
   },
   "dependencies": {
+    "crypto": "^1.0.1",
+    "crypto-js": "^4.2.0",
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
-    "google-auth-library": "^10.6.2"
+    "google-auth-library": "^10.6.2",
+    "mongodb": "^7.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/crypto-js": "^4.2.2",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "3.8.3"
+    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "prettier": "3.8.3",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.22.3"
   }
 }

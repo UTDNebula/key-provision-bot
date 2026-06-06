@@ -1,11 +1,21 @@
 import eslintConfigPkg from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 
 const { configs } = eslintConfigPkg;
 
 // Very rigorous, almost like TS
 export default [
   configs.recommended,
+  {
+    plugins: {
+      "simple-import-sort": simpleImportSort,
+    },
+    rules: {
+      "simple-import-sort/imports": "error",
+      "simple-import-sort/exports": "error",
+    },
+  },
   {
     languageOptions: {
       ecmaVersion: "latest",
