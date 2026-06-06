@@ -104,8 +104,7 @@ async function getAPIConfig(): Promise<APIConfig> {
 /**
  * Create new key in Google Cloud
  *
- * Refer to https://docs.cloud.google.com/api-keys/docs/create-manage-api-keys on
- * how to create Google Cloud API key through REST
+ * Refer to https://docs.cloud.google.com/api-keys/docs/create-manage-api-keys on how to create Google Cloud API key through REST
  */
 async function prodCreateKey(
   username: string,

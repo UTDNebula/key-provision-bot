@@ -65,9 +65,8 @@ async function main() {
 
     try {
       const bot = interaction.client.user;
-      // If the bot is offline, user can't command it to do anything
-      // except for admin waking it up
-      if (commandName !== "sleep_or_wake" && bot.presence.status !== "online") {
+      // If the bot is offline, user can't command it except for admin waking it up
+      if (commandName !== "sleep-or-wake" && bot.presence.status !== "online") {
         const user = interaction.user;
         await interaction.reply({
           content: `Hello <@${user.id}>! I'm currently offline, please comeback later.`,

@@ -9,7 +9,8 @@ import "dotenv/config";
 import type { Command } from "@/interface.ts";
 
 /**
- * Build the form asking for project's info, the API's usage
+ * Build the form asking for project's usage of the API
+ * @returns {ModalBuilder}
  */
 function buildRequestKeyForm(): ModalBuilder {
   const nameInput = new TextInputBuilder()
@@ -31,7 +32,7 @@ function buildRequestKeyForm(): ModalBuilder {
   const descriptionLabel = new LabelBuilder()
     .setLabel("Give us a short description")
     .setDescription(
-      "How will you use Nebula API in your project? (We appreciate as much information as possible)"
+      "How will you use Nebula API in your project? (We appreciate as much information as possible)",
     )
     .setTextInputComponent(descriptionInput);
 
@@ -51,7 +52,6 @@ const requestKeyCommand: Command = {
     .setName("request-key")
     .setDescription("Request the Nebula API key"),
   async execute(interaction) {
-    // Open the form
     await interaction.showModal(buildRequestKeyForm());
   },
 };
