@@ -63,7 +63,7 @@ type APIConfig = {
 };
 
 /**
- * Get config for API calling, including URL, project's ID, service, token.
+ * Get config for API calling, including URL, GCP project's ID, GCP service, & access token.
  */
 async function getAPIConfig(): Promise<APIConfig> {
   const baseUrl = `https://apikeys.googleapis.com/v2`;
@@ -141,6 +141,8 @@ async function prodCreateKey(
   const data = await response.json();
   const operation: string = data.name;
 
+  // TODO: Figure out the type of keyDetails instead of using any, because there might be
+  // some cool information from the key.
   // Poll the operations until user gets the key
   let keyDetails: any = {};
   while (!("done" in keyDetails && keyDetails.done === true)) {
@@ -185,6 +187,8 @@ async function provisionNewKey(
   project: string,
   description: string,
 ): Promise<string> {
+  // Depending upon the branch, it will create new keys differently
+  // Make changes when working on ticket.
   const branch = execSync("git rev-parse --abbrev-ref HEAD", {
     encoding: "utf8",
   }).trim();
@@ -234,8 +238,8 @@ const provisionKeyModalSubmit: ModalSubmit = {
     key = await provisionNewKey(
       user.id,
       user.username,
-      fields.getTextInputValue("projName"),
-      fields.getTextInputValue("projDescription"),
+      fields.getTextInputValue("projectName"),
+      fields.getTextInputValue("projectDescription"),
     );
     await user.send(
       `Your new key is ||${key}||. Happy coding! If you have any question, please DM Mike.`,

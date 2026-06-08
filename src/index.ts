@@ -129,7 +129,6 @@ async function main() {
 try {
   await main();
 } catch (err) {
-  console.log(`Error starting up the bot: ${err}`);
-  console.log("Program terminating");
+  console.log(`Error starting up the bot: ${err}. Program terminating.`);
   process.exit(1);
 }

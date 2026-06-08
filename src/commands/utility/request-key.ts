@@ -14,7 +14,7 @@ import type { Command } from "@/interface.ts";
  */
 function buildRequestKeyForm(): ModalBuilder {
   const nameInput = new TextInputBuilder()
-    .setCustomId("projName")
+    .setCustomId("projectName")
     .setStyle(TextInputStyle.Short)
     .setPlaceholder("Mars, Milky Way, WHL0137-LS, etc.")
     .setRequired(true);
@@ -25,7 +25,7 @@ function buildRequestKeyForm(): ModalBuilder {
     .setTextInputComponent(nameInput);
 
   const descriptionInput = new TextInputBuilder()
-    .setCustomId("projDescription")
+    .setCustomId("projectDescription")
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true);
 
