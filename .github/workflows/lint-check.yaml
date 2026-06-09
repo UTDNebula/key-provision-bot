@@ -1,4 +1,4 @@
-name: Lint and Formatting Check and Deploy
+name: CI/CD
 
 on:
   push:
