@@ -53,7 +53,7 @@ jobs:
 
             # Install dependencies and deploy the commands
             npm ci
-            npm run deploy-commands
+            npm run deploy
 
             # Restart the bot
             sudo systemctl restart key-provision-bot
