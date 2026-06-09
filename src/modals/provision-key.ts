@@ -81,17 +81,16 @@ async function getAPIConfig(): Promise<APIConfig> {
   const auth = new GoogleAuth({
     scopes: "https://www.googleapis.com/auth/cloud-platform",
   });
-  try {
-    // The token is cached, so we can call function multiple times and still get same token
-    const client = await auth.getClient();
-    const response = await client.getAccessToken();
-    if (!response.token) {
-      throw new Error("Undefined access token");
-    }
-    accessToken = response.token;
-  } catch (error) {
-    throw new Error("Error getting access token", { cause: error });
+  // The token is cached, so we can call function multiple times and still get same token
+  const client = await auth.getClient();
+  const response = await client.getAccessToken();
+  if (!response.res?.ok) {
+    throw new Error("HTTP Error getting access token");
   }
+  if (!response.token) {
+    throw new Error("Undefined access token");
+  }
+  accessToken = response.token;
 
   return {
     baseUrl,
