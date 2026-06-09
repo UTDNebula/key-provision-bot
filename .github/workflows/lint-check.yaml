@@ -1,15 +1,15 @@
-name: CI/CD
+name: CI
 
 on:
   push:
-    branches: ["master", "develop"]
+    branches: ["develop"]
   pull_request:
-    branches: ["master", "develop"]
+    branches: ["develop"]
   workflow_dispatch:
 
 jobs:
   ci:
-    name: Run ESLint + Prettier
+    name: Run ESLint + Prettier + Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -30,30 +30,3 @@ jobs:
 
       - name: Run Prettier
         run: npm run format:check
-
-  cd:
-    name: Deploy to GCP VM
-    needs: ci
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            set -e
-            cd key-provision-bot
-
-            # Pull latest changes from master branch (echo to see)
-            git checkout master
-            git rev-parse --abbrev-ref HEAD
-
-            # Install dependencies and deploy the commands
-            npm ci
-            npm run deploy
-
-            # Restart the bot
-            sudo systemctl restart key-provision-bot

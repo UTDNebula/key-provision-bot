@@ -1,0 +1,33 @@
+name: CD
+
+on:
+  push:
+    branches: ["develop"]
+  workflow_dispatch:
+
+jobs:
+  cd:
+    name: Deploy to GCP Compute Engine
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            cd key-provision-bot
+
+            # Pull latest changes from develop branch
+            git checkout develop
+            git pull origin develop
+
+            # Install dependencies and deploy the commands
+            npm ci
+            npm run deploy-commands
+
+            # Restart the bot
+            sudo systemctl restart key-provision-bot
