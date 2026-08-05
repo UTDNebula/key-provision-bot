@@ -69,13 +69,18 @@ export async function getClient(): Promise<MongoClient> {
     if (!mongoURL) {
       throw new Error("Undefined MONGO_URL");
     }
+
     const mongoClient = new MongoClient(mongoURL);
-    cachedConnection = mongoClient.connect().catch((err) => {
-      // Clear the cached connection and throw error
-      cachedConnection = null;
-      throw err;
-    });
-    console.log("Successfully connected to MongoDB!");
+
+    cachedConnection = mongoClient.connect()
+      .then((client) => {
+        console.log("Successfully connected to MongoDB!");
+        return client;
+      })
+      .catch((err) => {
+        cachedConnection = null;
+        throw err;
+      });
   }
 
   return cachedConnection;
