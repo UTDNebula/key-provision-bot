@@ -72,7 +72,8 @@ export async function getClient(): Promise<MongoClient> {
 
     const mongoClient = new MongoClient(mongoURL);
 
-    cachedConnection = mongoClient.connect()
+    cachedConnection = mongoClient
+      .connect()
       .then((client) => {
         console.log("Successfully connected to MongoDB!");
         return client;

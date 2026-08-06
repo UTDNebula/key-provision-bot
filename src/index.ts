@@ -35,6 +35,8 @@ async function main() {
     discordClient.modalSubmits.set(modal.customId, modal);
   }
 
+  discordClient.cooldowns = new Collection();
+
   discordClient.once(Events.ClientReady, (readyClient) => {
     // Upon startup, set the bot to be online
     if (discordClient.user) {
@@ -55,13 +57,38 @@ async function main() {
   discordClient.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
-    const interactionClient = interaction.client as DiscordClient;
+    const discordClient = interaction.client as DiscordClient;
     const commandName = interaction.commandName;
-    const command = interactionClient.commands.get(commandName);
+    const command = discordClient.commands.get(commandName);
+    const commandCooldowns = discordClient.cooldowns;
+
     if (!command) {
-      console.error(`${commandName} not found!`);
       return;
     }
+
+    let timestamps = commandCooldowns.get(command.data.name);
+
+    if (!timestamps) {
+      timestamps = new Collection<string, number>();
+      commandCooldowns.set(command.data.name, timestamps);
+    }
+
+    const now = Date.now();
+    const userId = interaction.user.id;
+
+    const expirationTime = timestamps.get(userId);
+
+    if (expirationTime && now < expirationTime) {
+      const expiredTimestamp = Math.round(expirationTime / 1000);
+
+      return interaction.reply({
+        content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const cooldownAmount = (command.cooldown ?? 3) * 1000;
+    timestamps.set(userId, now + cooldownAmount);
 
     try {
       const bot = interaction.client.user;

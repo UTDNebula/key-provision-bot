@@ -10,6 +10,7 @@ import {
  * Slash command
  */
 export type Command = {
+  cooldown?: number;
   data: SlashCommandBuilder;
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 };
@@ -28,6 +29,9 @@ export type ModalSubmit = {
 export interface DiscordClient extends Client {
   // Map from the command's name to the command
   commands: Collection<string, Command>;
+
+  // Map from the command's name to (user id -> timestamp)
+  cooldowns: Collection<string, Collection<string, number>>;
 
   // Map from the modal's custom ID to the modal submission handler
   modalSubmits: Collection<string, ModalSubmit>;
