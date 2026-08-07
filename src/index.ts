@@ -90,7 +90,7 @@ async function main() {
         });
       }
 
-      const cooldownAmount = (command.cooldown ?? 3) * 1000;
+      const cooldownAmount = (command.cooldown ?? 30) * 1000;
       timestamps.set(userId, now + cooldownAmount);
 
       const bot = interaction.client.user;
