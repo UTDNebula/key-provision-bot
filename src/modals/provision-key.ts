@@ -185,11 +185,8 @@ async function provisionNewKey(
   project: string,
   description: string,
 ): Promise<string> {
-  const branch = execSync("git rev-parse --abbrev-ref HEAD", {
-    encoding: "utf8",
-  }).trim();
   const newKey =
-    branch === "master"
+    process.env.USE_GCLOUD === "true"
       ? await prodCreateKey(username, project)
       : await devCreateKey(username, project);
 
