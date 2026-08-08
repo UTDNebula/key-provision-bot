@@ -5,7 +5,6 @@ import { KeyProvision, ModalSubmit } from "@/interface.ts";
 import { getKeyProvisionCollection } from "@/utils.ts";
 import CryptoJS from "crypto-js";
 import { randomBytes } from "node:crypto";
-import { execSync } from "node:child_process";
 
 /**
  * Backoff for number of seconds, used for polling the key for operations
