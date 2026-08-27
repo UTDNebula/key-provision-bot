@@ -7,22 +7,15 @@ import CryptoJS from "crypto-js";
 import { randomBytes } from "node:crypto";
 
 /**
- * Backoff for number of seconds, used for polling the key for operations
- */
-function backoff(dur: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, dur * 1000));
-}
-
-/**
  * Encrypt the provisioned API key using AES-256 algorithm
  */
 function encryptAPIKey(apiKey: string): string {
-  const encryptionKey = process.env.ENCRYPTION_KEY;
-  if (!encryptionKey) {
-    throw new Error("Undefined ENCRYPTION_KEY");
+  const encryptionToken = process.env.ENCRYPTION_KEY;
+  if (!encryptionToken) {
+    throw new Error("Undefined ENCRYPTION_TOKEN");
   }
 
-  const dbKey = CryptoJS.AES.encrypt(apiKey, encryptionKey);
+  const dbKey = CryptoJS.AES.encrypt(apiKey, encryptionToken);
   return dbKey.toString();
 }
 
@@ -30,28 +23,29 @@ function encryptAPIKey(apiKey: string): string {
  * Decrypt the key stored in DB into the actual API key
  */
 function decryptAPIKey(dbKey: string): string {
-  const encryptionKey = process.env.ENCRYPTION_KEY;
-  if (!encryptionKey) {
-    throw new Error("Undefined ENCRYPTION_KEY");
+  const encryptionToken = process.env.ENCRYPTION_TOKEN;
+  if (!encryptionToken) {
+    throw new Error("Undefined ENCRYPTION_TOKEN");
   }
 
-  const bytes = CryptoJS.AES.decrypt(dbKey, encryptionKey);
-  const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-  return decrypted;
+  const apiKey = CryptoJS.AES.decrypt(dbKey, encryptionToken).toString(
+    CryptoJS.enc.Utf8,
+  );
+  return apiKey;
 }
 
 /**
  * Check if this user has a provisioned key and returns the key.
  * Otherwise, returns an empty string.
  */
-async function checkExistingKey(userId: string): Promise<string> {
+async function checkExistingKey(userId: string): Promise<string | null> {
   const collection = await getKeyProvisionCollection();
 
   const doc = await collection.findOne({ userId: userId });
   if (!doc) {
-    return "";
+    return null;
   }
-  return decryptAPIKey(doc.key);
+  return decryptAPIKey(doc.encryptedKey);
 }
 
 type APIConfig = {
@@ -143,7 +137,7 @@ async function prodCreateKey(
   // Poll the operations until user gets the key
   let keyDetails: any = {};
   while (!("done" in keyDetails && keyDetails.done === true)) {
-    await backoff(10);
+    await new Promise((resolve) => setTimeout(resolve, 10000));
 
     response = await fetch(`${baseUrl}/${operation}`, {
       method: "GET",
@@ -196,7 +190,7 @@ async function provisionNewKey(
     username: username,
     project: project,
     description: description,
-    key: encryptAPIKey(newKey),
+    encryptedKey: encryptAPIKey(newKey),
   } as KeyProvision;
 
   const insertedDoc = await collection.insertOne(doc);
@@ -220,21 +214,21 @@ const provisionKeyModalSubmit: ModalSubmit = {
       `Hello <@${user.id}>! We received your request. We'll DM you later.`,
     );
 
-    let key = await checkExistingKey(user.id);
-    if (key !== "") {
+    const existingKey = await checkExistingKey(user.id);
+    if (existingKey) {
       await user.send(
-        `You have been provisioned a key. Your key is ||${key}||. If you have any question, please DM Mike.`,
+        `You have been provisioned a key. Your key is ||${existingKey}||. If you have any question, please DM Mike.`,
       );
       return;
     }
-    key = await provisionNewKey(
+    const provisionedKey = await provisionNewKey(
       user.id,
       user.username,
       fields.getTextInputValue("projName"),
       fields.getTextInputValue("projDescription"),
     );
     await user.send(
-      `Your new key is ||${key}||. Happy coding! If you have any question, please DM Mike.`,
+      `Your new key is ||${provisionedKey}||. Happy coding! If you have any question, please DM Mike.`,
     );
   },
 };

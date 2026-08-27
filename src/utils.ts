@@ -36,8 +36,7 @@ export async function getCommands(): Promise<Command[]> {
 }
 
 /**
- * Dynamically retrieve all the modal submit interactions
- * in the modals folder
+ * Dynamically retrieve all the modal submit interactions in the modals folder
  */
 export async function getModalSubmits(): Promise<ModalSubmit[]> {
   const modalSubmits: ModalSubmit[] = [];
@@ -63,7 +62,7 @@ let cachedConnection: Promise<MongoClient> | null = null;
 /**
  * Connect to DB, and cache the connection
  */
-export async function getClient(): Promise<MongoClient> {
+export async function getMongoClient(): Promise<MongoClient> {
   if (!cachedConnection) {
     const mongoURL = process.env.MONGO_URL;
     if (!mongoURL) {
@@ -93,16 +92,6 @@ export async function getClient(): Promise<MongoClient> {
 export async function getKeyProvisionCollection(): Promise<
   Collection<KeyProvision>
 > {
-  const dbName = process.env.DATABASE_NAME;
-  if (!dbName) {
-    throw new Error("Undefined DATABASE_NAME");
-  }
-  const colName = process.env.KEY_COL_NAME;
-  if (!colName) {
-    throw new Error("Undefined KEY_COL_NAME");
-  }
-
-  // Get the cached connection to the database
-  const client = await getClient();
-  return client.db(dbName).collection<KeyProvision>(colName);
+  const client = await getMongoClient();
+  return client.db("combinedDB").collection<KeyProvision>("keyProvisions");
 }
