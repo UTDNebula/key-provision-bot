@@ -5,7 +5,6 @@ import { KeyProvision, ModalSubmit } from "@/interface.ts";
 import { getKeyProvisionCollection } from "@/utils.ts";
 import CryptoJS from "crypto-js";
 import { randomBytes } from "node:crypto";
-import { execSync } from "node:child_process";
 
 /**
  * Backoff for number of seconds, used for polling the key for operations
@@ -185,11 +184,8 @@ async function provisionNewKey(
   project: string,
   description: string,
 ): Promise<string> {
-  const branch = execSync("git rev-parse --abbrev-ref HEAD", {
-    encoding: "utf8",
-  }).trim();
   const newKey =
-    branch === "master"
+    process.env.USE_GCLOUD === "true"
       ? await prodCreateKey(username, project)
       : await devCreateKey(username, project);
 

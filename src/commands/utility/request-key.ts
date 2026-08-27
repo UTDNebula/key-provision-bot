@@ -27,12 +27,49 @@ function buildRequestKeyForm(): ModalBuilder {
   const descriptionInput = new TextInputBuilder()
     .setCustomId("projDescription")
     .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true);
+    .setRequired(false);
+
+  const checkboxGroupLabel = new LabelBuilder()
+    .setLabel("What are you using this API for?")
+    .setCheckboxGroupComponent((checkboxes) =>
+      checkboxes.setCustomId("api_purpose").addOptions([
+        {
+          label: "Personal Project",
+          value: "personal",
+          description: "Building something for myself or portfolio",
+          default: false,
+        },
+        {
+          label: "Hackathon Project",
+          value: "hackathon",
+          description: "Building for a competition or hackathon event",
+          default: false,
+        },
+        {
+          label: "Class Assignment",
+          value: "classwork",
+          description: "School/university project or coursework",
+          default: false,
+        },
+        {
+          label: "Learning/Educational",
+          value: "learning",
+          description: "Just learning how APIs work",
+          default: false,
+        },
+        {
+          label: "Testing the API",
+          value: "testing",
+          description: "For API developers/members testing functionality",
+          default: false,
+        },
+      ]),
+    );
 
   const descriptionLabel = new LabelBuilder()
     .setLabel("Give us a short description")
     .setDescription(
-      "How will you use Nebula API in your project? (We appreciate as much information as possible)",
+      "Tell us more! We would love to hear more details on how you are using our API. (Optional)",
     )
     .setTextInputComponent(descriptionInput);
 
@@ -40,7 +77,12 @@ function buildRequestKeyForm(): ModalBuilder {
     .setCustomId("requestKeyForm")
     .setTitle("Request API Key Form");
 
-  requestKeyForm.addLabelComponents(nameLabel, descriptionLabel);
+  requestKeyForm.addLabelComponents(
+    nameLabel,
+    checkboxGroupLabel,
+    descriptionLabel,
+  );
+
   return requestKeyForm;
 }
 
@@ -48,6 +90,7 @@ function buildRequestKeyForm(): ModalBuilder {
  * Responding to user's command requesting the key
  */
 const requestKeyCommand: Command = {
+  cooldown: 90,
   data: new SlashCommandBuilder()
     .setName("request-key")
     .setDescription("Request the Nebula API key"),
