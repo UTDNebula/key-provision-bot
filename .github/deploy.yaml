@@ -1,0 +1,42 @@
+name: CD
+
+on:
+  push:
+    branches: [ "develop" ]
+  workflow_dispatch:
+
+jobs:
+  cd:
+    name: Deploy to GCP Compute Engine
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+
+            cd ~/key-provision-bot
+
+            current_branch=$(git branch --show-current)
+
+            if [ "$current_branch" != "develop" ]; then
+              echo "Expected develop branch but found: $current_branch"
+              exit 1
+            fi
+
+            echo "Pulling latest changes..."
+            git pull --ff-only
+
+            echo "Installing dependencies..."
+            npm ci
+
+            echo "Restarting service..."
+            sudo systemctl restart dev-key-provision-bot
+
+            echo "Service status:"
+            sudo systemctl status dev-key-provision-bot --no-pager
