@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "discord": "tsx src/deploy-commands.ts && tsx src/index.ts",
-    "lint": "eslint .",
+    "lint:check": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "npx prettier . --write",
+    "format:check": "prettier . --check",
+    "format:fix": "npx prettier . --write",
+    "discord": "tsx src/deploy-commands.ts && tsx src/index.ts",
     "deploy": "tsx src/deploy-commands.ts"
   },
   "dependencies": {
