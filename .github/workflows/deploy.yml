@@ -36,7 +36,7 @@ jobs:
             npm ci
 
             echo "Restarting service..."
-            sudo systemctl restart dev-key-provision-bot
+            sudo -n /usr/bin/systemctl restart dev-key-provision-bot
 
             echo "Service status:"
-            sudo systemctl status dev-key-provision-bot --no-pager
+            sudo -n /usr/bin/systemctl status dev-key-provision-bot --no-pager
