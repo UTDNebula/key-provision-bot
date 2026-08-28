@@ -6,6 +6,28 @@ on:
   workflow_dispatch:
 
 jobs:
+  ci:
+    name: Run ESLint + Prettier + Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v5
+
+      - name: Set up npm and Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run ESLint check
+        run: npm run lint:check
+
+      - name: Run Prettier check
+        run: npm run format:check
   cd:
     name: Deploy to GCP Compute Engine
     runs-on: ubuntu-latest
@@ -20,23 +42,39 @@ jobs:
           script: |
             set -e
 
+            BOLD='\033[1m'
+            BLUE='\033[1;34m'
+            CYAN='\033[1;36m'
+            GREEN='\033[1;32m'
+            YELLOW='\033[1;33m'
+            RESET='\033[0m'
+
+            title() {
+              printf "\n${CYAN}==================================================${RESET}\n"
+              printf "${BOLD}${BLUE}  %s${RESET}\n" "$1"
+              printf "${CYAN}==================================================${RESET}\n\n"
+            }
+
             cd ~/key-provision-bot
 
             current_branch=$(git branch --show-current)
-
             if [ "$current_branch" != "develop" ]; then
-              echo "Expected develop branch but found: $current_branch"
+              printf "${BOLD}\033[1;31m Expected develop branch but found: %s${RESET}\n" "$current_branch"
               exit 1
             fi
 
-            echo "Pulling latest changes..."
+            title "PULLING LATEST CHANGES"
             git pull --ff-only
 
-            echo "Installing dependencies..."
+            title "INSTALLING DEPENDENCIES"
             npm ci
 
-            echo "Restarting service..."
+            title "RESTARTING DEV KEY PROVISION BOT"
             sudo -n /usr/bin/systemctl restart dev-key-provision-bot
 
-            echo "Service status:"
+            title "SERVICE STATUS"
             sudo -n /usr/bin/systemctl status dev-key-provision-bot --no-pager
+
+            printf "\n${GREEN}==================================================${RESET}\n"
+            printf "${BOLD}${GREEN}  DEPLOYMENT COMPLETED SUCCESSFULLY${RESET}\n"
+            printf "${GREEN}==================================================${RESET}\n"
