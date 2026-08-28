@@ -159,29 +159,24 @@ async function prodCreateKey(
  * Test version of `createKey`, used in dev environment to avoid hitting GCloud.
  * This just generates random key.
  */
-async function devCreateKey(
-  username: string,
-  project: string,
-): Promise<string> {
+async function devCreateKey(): Promise<string> {
   const GCLOUD_KEY_BYTES = 36;
   return randomBytes(GCLOUD_KEY_BYTES).toString("hex");
 }
 
 /**
- * Provision the new API key for this user, including:
- * - Create new key in Google Cloud
- * - Encrypt the created key and store key's info to Mongo DB
+ * Create new key in Google Cloud, encrypt the created key, and store key's info into Mongo DB
  */
-async function provisionNewKey(
+async function createAndPersistKey(
   userId: string,
   username: string,
   project: string,
   description: string,
 ): Promise<string> {
-  const newKey =
+  const createdKey =
     process.env.USE_GCLOUD === "true"
       ? await prodCreateKey(username, project)
-      : await devCreateKey(username, project);
+      : await devCreateKey();
 
   // Save the provision record to the database
   const collection = await getKeyProvisionCollection();
@@ -190,7 +185,7 @@ async function provisionNewKey(
     username: username,
     project: project,
     description: description,
-    encryptedKey: encryptAPIKey(newKey),
+    encryptedKey: encryptAPIKey(createdKey),
   } as KeyProvision;
 
   const insertedDoc = await collection.insertOne(doc);
@@ -198,7 +193,69 @@ async function provisionNewKey(
     throw new Error("Error inserting provision to DB");
   }
 
-  return newKey;
+  return createdKey;
+}
+
+type ProvisionResults = {
+  key: string;
+  isNewlyCreated: boolean;
+};
+
+/** Inflight map from a user to a provisioning to control concurrency */
+const inflightProvisions = new Map<string, Promise<ProvisionResults>>();
+
+/**
+ * See singleflight pattern, which is technically a Go concept but the idea is tranferrable
+ * to other languages.
+ */
+async function provisionKey(
+  userId: string,
+  username: string,
+  projectName: string,
+  projectDescription: string,
+): Promise<ProvisionResults> {
+  const existingProvision = inflightProvisions.get(userId);
+  if (existingProvision) {
+    console.log(`Joined in-flight request for user ${username}...`);
+    return existingProvision;
+  }
+
+  // Start the new provision requests on the user
+  const newProvision = (async () => {
+    const existingKey = await checkExistingKey(userId);
+    if (existingKey) {
+      console.log(`[Result] Existing key found for user ${username}`);
+      return {
+        key: existingKey,
+        isNewlyCreated: false,
+      } as ProvisionResults;
+    }
+    const createdKey = await createAndPersistKey(
+      userId,
+      username,
+      projectName,
+      projectDescription,
+    );
+    console.log(`[Result] New key created for user ${username}`);
+    return {
+      key: createdKey,
+      isNewlyCreated: true,
+    } as ProvisionResults;
+  })();
+  console.log(`Started provisioning for user ${username}...`);
+  inflightProvisions.set(userId, newProvision);
+
+  try {
+    const provisionResult = await newProvision;
+    console.log(`Completed provisioning for user ${username} successully!`);
+    return provisionResult;
+  } catch (error: any) {
+    console.error(`Failed provisioning for user ${username}`, error);
+    throw error;
+  } finally {
+    // After the provisioning actions is done, remove it from the map
+    inflightProvisions.delete(userId);
+  }
 }
 
 /**
@@ -214,21 +271,21 @@ const provisionKeyModalSubmit: ModalSubmit = {
       `Hello <@${user.id}>! We received your request. We'll DM you later.`,
     );
 
-    const existingKey = await checkExistingKey(user.id);
-    if (existingKey) {
-      await user.send(
-        `You have been provisioned a key. Your key is ||${existingKey}||. If you have any question, please DM Mike.`,
-      );
-      return;
-    }
-    const provisionedKey = await provisionNewKey(
+    const { key, isNewlyCreated } = await provisionKey(
       user.id,
       user.username,
       fields.getTextInputValue("projName"),
       fields.getTextInputValue("projDescription"),
     );
+
+    if (!isNewlyCreated) {
+      await user.send(
+        `You have been provisioned a key. Your key is ||${key}||. If you have any question, please DM Mike.`,
+      );
+      return;
+    }
     await user.send(
-      `Your new key is ||${provisionedKey}||. Happy coding! If you have any question, please DM Mike.`,
+      `Your new key is ||${key}||. Happy coding! If you have any question, please DM Mike.`,
     );
   },
 };
