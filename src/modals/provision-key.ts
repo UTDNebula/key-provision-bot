@@ -10,12 +10,12 @@ import { randomBytes } from "node:crypto";
  * Encrypt the provisioned API key using AES-256 algorithm
  */
 function encryptAPIKey(apiKey: string): string {
-  const encryptionToken = process.env.ENCRYPTION_KEY;
-  if (!encryptionToken) {
-    throw new Error("Undefined ENCRYPTION_TOKEN");
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    throw new Error("Undefined ENCRYPTION_KEY");
   }
 
-  const dbKey = CryptoJS.AES.encrypt(apiKey, encryptionToken);
+  const dbKey = CryptoJS.AES.encrypt(apiKey, encryptionKey);
   return dbKey.toString();
 }
 
@@ -23,12 +23,12 @@ function encryptAPIKey(apiKey: string): string {
  * Decrypt the key stored in DB into the actual API key
  */
 function decryptAPIKey(dbKey: string): string {
-  const encryptionToken = process.env.ENCRYPTION_TOKEN;
-  if (!encryptionToken) {
-    throw new Error("Undefined ENCRYPTION_TOKEN");
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    throw new Error("Undefined ENCRYPTION_KEY");
   }
 
-  const apiKey = CryptoJS.AES.decrypt(dbKey, encryptionToken).toString(
+  const apiKey = CryptoJS.AES.decrypt(dbKey, encryptionKey).toString(
     CryptoJS.enc.Utf8,
   );
   return apiKey;
@@ -136,8 +136,12 @@ async function prodCreateKey(
 
   // Poll the operations until user gets the key
   let keyDetails: any = {};
+  let attempt = 0;
   while (!("done" in keyDetails && keyDetails.done === true)) {
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+    if (attempt > 0) {
+      // Start waiting from the second attempt
+      await new Promise((r) => setTimeout(r, 5000));
+    }
 
     response = await fetch(`${baseUrl}/${operation}`, {
       method: "GET",
@@ -150,6 +154,7 @@ async function prodCreateKey(
       throw new Error(`HTTP error ${response.status} polling key!`);
     }
     keyDetails = await response.json();
+    attempt++;
   }
 
   return keyDetails.response.keyString;
