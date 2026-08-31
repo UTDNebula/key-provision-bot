@@ -1,5 +1,6 @@
 import {
   ActivityType,
+  MessageFlags,
   PermissionFlagsBits,
   PresenceUpdateStatus,
   SlashCommandBuilder,
@@ -18,6 +19,15 @@ const sleepCommand: Command = {
 
   async execute(interaction) {
     const bot = interaction.client.user;
+    const adminIds = process.env.BOT_ADMINS?.split(",") || [];
+
+    if (!adminIds.includes(interaction.user.id)) {
+      await interaction.reply({
+        content: "You are not allowed to use this command",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     bot.setPresence({
       activities: [{ name: "Sleeping...", type: ActivityType.Custom }],

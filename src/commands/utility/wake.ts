@@ -1,5 +1,6 @@
 import {
   ActivityType,
+  MessageFlags,
   PresenceUpdateStatus,
   SlashCommandBuilder,
 } from "discord.js";
@@ -15,6 +16,15 @@ const wakeCommand: Command = {
     .setDescription("wake the key provision bot"),
   async execute(interaction) {
     const bot = interaction.client.user;
+    const adminIds = process.env.BOT_ADMINS?.split(",") || [];
+
+    if (!adminIds.includes(interaction.user.id)) {
+      await interaction.reply({
+        content: "You are not allowed to use this command",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     bot.setPresence({
       activities: [
