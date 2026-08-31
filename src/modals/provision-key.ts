@@ -177,6 +177,7 @@ async function createAndPersistKey(
   username: string,
   project: string,
   description: string,
+  apiPurpose: readonly string[],
 ): Promise<string> {
   const createdKey =
     process.env.USE_GCLOUD === "true"
@@ -191,9 +192,11 @@ async function createAndPersistKey(
     project: project,
     description: description,
     encryptedKey: encryptAPIKey(createdKey),
+    apiPurpose: apiPurpose,
   } as KeyProvision;
-
+  console.log("About to insert:", JSON.stringify(doc, null, 2));
   const insertedDoc = await collection.insertOne(doc);
+  console.log("Insert result:", insertedDoc);
   if (!insertedDoc.acknowledged) {
     throw new Error("Error inserting provision to DB");
   }
@@ -218,6 +221,7 @@ async function provisionKey(
   username: string,
   projectName: string,
   projectDescription: string,
+  apiPurpose: readonly string[],
 ): Promise<ProvisionResults> {
   const existingProvision = inflightProvisions.get(userId);
   if (existingProvision) {
@@ -240,6 +244,7 @@ async function provisionKey(
       username,
       projectName,
       projectDescription,
+      apiPurpose,
     );
     console.log(`[Result] New key created for user ${username}`);
     return {
@@ -281,6 +286,7 @@ const provisionKeyModalSubmit: ModalSubmit = {
       user.username,
       fields.getTextInputValue("projName"),
       fields.getTextInputValue("projDescription"),
+      fields.getCheckboxGroup("apiPurpose"),
     );
 
     if (!isNewlyCreated) {

@@ -32,7 +32,7 @@ function buildRequestKeyForm(): ModalBuilder {
   const checkboxGroupLabel = new LabelBuilder()
     .setLabel("What are you using this API for?")
     .setCheckboxGroupComponent((checkboxes) =>
-      checkboxes.setCustomId("api_purpose").addOptions([
+      checkboxes.setCustomId("apiPurpose").addOptions([
         {
           label: "Personal Project",
           value: "personal",
