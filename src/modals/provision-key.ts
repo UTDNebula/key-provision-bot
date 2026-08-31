@@ -194,9 +194,9 @@ async function createAndPersistKey(
     encryptedKey: encryptAPIKey(createdKey),
     apiPurpose: apiPurpose,
   } as KeyProvision;
-  console.log("About to insert:", JSON.stringify(doc, null, 2));
+
   const insertedDoc = await collection.insertOne(doc);
-  console.log("Insert result:", insertedDoc);
+
   if (!insertedDoc.acknowledged) {
     throw new Error("Error inserting provision to DB");
   }
