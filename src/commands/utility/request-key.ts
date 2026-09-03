@@ -90,7 +90,7 @@ function buildRequestKeyForm(): ModalBuilder {
  * Responding to user's command requesting the key
  */
 const requestKeyCommand: Command = {
-  cooldown: 90,
+  cooldown: 120,
   data: new SlashCommandBuilder()
     .setName("request-key")
     .setDescription("Request the Nebula API key"),

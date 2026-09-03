@@ -1,4 +1,4 @@
-import { ModalSubmitInteraction } from "discord.js";
+import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
 import { KeyProvision, ModalSubmit } from "@/interface.ts";
@@ -225,7 +225,7 @@ async function provisionKey(
 ): Promise<ProvisionResults> {
   const existingProvision = inflightProvisions.get(userId);
   if (existingProvision) {
-    console.log(`Joined in-flight request for user ${username}...`);
+    console.log(`[PROVISION] Joined in-flight request for user ${username}...`);
     return existingProvision;
   }
 
@@ -233,7 +233,7 @@ async function provisionKey(
   const newProvision = (async () => {
     const existingKey = await checkExistingKey(userId);
     if (existingKey) {
-      console.log(`[Result] Existing key found for user ${username}`);
+      console.log(`[PROVISION] Existing key found for user ${username}`);
       return {
         key: existingKey,
         isNewlyCreated: false,
@@ -246,21 +246,23 @@ async function provisionKey(
       projectDescription,
       apiPurpose,
     );
-    console.log(`[Result] New key created for user ${username}`);
+    console.log(`[PROVISION] New key created for user ${username}`);
     return {
       key: createdKey,
       isNewlyCreated: true,
     } as ProvisionResults;
   })();
-  console.log(`Started provisioning for user ${username}...`);
+  console.log(`[PROVISION] Started provisioning for user ${username}...`);
   inflightProvisions.set(userId, newProvision);
 
   try {
     const provisionResult = await newProvision;
-    console.log(`Completed provisioning for user ${username} successully!`);
+    console.log(
+      `[PROVISION] Completed provisioning for user ${username} successfully!`,
+    );
     return provisionResult;
   } catch (error: any) {
-    console.error(`Failed provisioning for user ${username}`, error);
+    console.error(`[ERROR] Failed provisioning for user ${username}`, error);
     throw error;
   } finally {
     // After the provisioning actions is done, remove it from the map
@@ -276,15 +278,13 @@ const provisionKeyModalSubmit: ModalSubmit = {
   execute: async (interaction: ModalSubmitInteraction) => {
     const user = interaction.user;
     const fields = interaction.fields;
-
-    await interaction.reply(
-      `Hello <@${user.id}>! We received your request. We'll DM you later.`,
-    );
+    const projectName = fields.getTextInputValue("projName");
+    await interaction.reply(`Hello <@${user.id}>! We received your request. We'll DM you later.`);
 
     const { key, isNewlyCreated } = await provisionKey(
       user.id,
       user.username,
-      fields.getTextInputValue("projName"),
+      projectName,
       fields.getTextInputValue("projDescription"),
       fields.getCheckboxGroup("apiPurpose"),
     );

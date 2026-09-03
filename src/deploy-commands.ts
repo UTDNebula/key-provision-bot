@@ -14,6 +14,10 @@ async function deployCommands() {
   if (!clientId) {
     throw new Error("Undefined CLIENT_ID");
   }
+  const guildId = process.env.GUILD_ID;
+  if (!guildId) {
+    throw new Error("Undefined GUILD_ID");
+  }
 
   const serializedCommands: any[] = [];
   for (const command of await getCommands()) {
@@ -24,13 +28,14 @@ async function deployCommands() {
   const rest = new REST().setToken(discordToken);
 
   try {
-    console.log(`Deploying ${serializedCommands.length} commands...`);
-
-    const data: any = await rest.put(Routes.applicationCommands(clientId!), {
-      body: serializedCommands,
-    });
-
-    console.log(`Successfully deployed ${data.length} commands!`);
+    console.log(`[DEPLOY] Deploying ${serializedCommands.length} commands...`);
+    const data: any = await rest.put(
+      Routes.applicationGuildCommands(clientId!, guildId!),
+      {
+        body: serializedCommands,
+      },
+    );
+    console.log(`[DEPLOY] Successfully deployed ${data.length} commands!`);
   } catch (err) {
     throw err;
   }
@@ -39,7 +44,6 @@ async function deployCommands() {
 try {
   await deployCommands();
 } catch (err) {
-  console.log(`Error deploying commands: ${err}`);
-  console.log("Program terminating");
+  console.error(`[ERROR] Error deploying commands: ${err}`);
   process.exit(1);
 }

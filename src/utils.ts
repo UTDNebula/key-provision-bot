@@ -74,7 +74,7 @@ export async function getMongoClient(): Promise<MongoClient> {
     cachedConnection = mongoClient
       .connect()
       .then((client) => {
-        console.log("Successfully connected to MongoDB!");
+        console.log("[STARTUP] Successfully connected to MongoDB!");
         return client;
       })
       .catch((err) => {
