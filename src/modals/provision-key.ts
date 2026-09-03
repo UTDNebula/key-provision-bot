@@ -1,4 +1,4 @@
-import { ModalSubmitInteraction } from "discord.js";
+import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
 import { KeyProvision, ModalSubmit } from "@/interface.ts";
@@ -177,6 +177,7 @@ async function createAndPersistKey(
   username: string,
   project: string,
   description: string,
+  apiPurpose: readonly string[],
 ): Promise<string> {
   const createdKey =
     process.env.USE_GCLOUD === "true"
@@ -191,9 +192,11 @@ async function createAndPersistKey(
     project: project,
     description: description,
     encryptedKey: encryptAPIKey(createdKey),
+    apiPurpose: apiPurpose,
   } as KeyProvision;
 
   const insertedDoc = await collection.insertOne(doc);
+
   if (!insertedDoc.acknowledged) {
     throw new Error("Error inserting provision to DB");
   }
@@ -218,10 +221,11 @@ async function provisionKey(
   username: string,
   projectName: string,
   projectDescription: string,
+  apiPurpose: readonly string[],
 ): Promise<ProvisionResults> {
   const existingProvision = inflightProvisions.get(userId);
   if (existingProvision) {
-    console.log(`Joined in-flight request for user ${username}...`);
+    console.log(`[PROVISION] Joined in-flight request for user ${username}...`);
     return existingProvision;
   }
 
@@ -229,7 +233,7 @@ async function provisionKey(
   const newProvision = (async () => {
     const existingKey = await checkExistingKey(userId);
     if (existingKey) {
-      console.log(`[Result] Existing key found for user ${username}`);
+      console.log(`[PROVISION] Existing key found for user ${username}`);
       return {
         key: existingKey,
         isNewlyCreated: false,
@@ -240,22 +244,25 @@ async function provisionKey(
       username,
       projectName,
       projectDescription,
+      apiPurpose,
     );
-    console.log(`[Result] New key created for user ${username}`);
+    console.log(`[PROVISION] New key created for user ${username}`);
     return {
       key: createdKey,
       isNewlyCreated: true,
     } as ProvisionResults;
   })();
-  console.log(`Started provisioning for user ${username}...`);
+  console.log(`[PROVISION] Started provisioning for user ${username}...`);
   inflightProvisions.set(userId, newProvision);
 
   try {
     const provisionResult = await newProvision;
-    console.log(`Completed provisioning for user ${username} successully!`);
+    console.log(
+      `[PROVISION] Completed provisioning for user ${username} successfully!`,
+    );
     return provisionResult;
   } catch (error: any) {
-    console.error(`Failed provisioning for user ${username}`, error);
+    console.error(`[ERROR] Failed provisioning for user ${username}`, error);
     throw error;
   } finally {
     // After the provisioning actions is done, remove it from the map
@@ -271,7 +278,7 @@ const provisionKeyModalSubmit: ModalSubmit = {
   execute: async (interaction: ModalSubmitInteraction) => {
     const user = interaction.user;
     const fields = interaction.fields;
-
+    const projectName = fields.getTextInputValue("projName");
     await interaction.reply(
       `Hello <@${user.id}>! We received your request. We'll DM you later.`,
     );
@@ -279,8 +286,9 @@ const provisionKeyModalSubmit: ModalSubmit = {
     const { key, isNewlyCreated } = await provisionKey(
       user.id,
       user.username,
-      fields.getTextInputValue("projName"),
+      projectName,
       fields.getTextInputValue("projDescription"),
+      fields.getCheckboxGroup("apiPurpose"),
     );
 
     if (!isNewlyCreated) {

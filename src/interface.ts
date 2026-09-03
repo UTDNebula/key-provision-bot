@@ -46,4 +46,5 @@ export type KeyProvision = {
   project: string;
   description: string;
   encryptedKey: string;
+  apiPurpose: string[];
 };

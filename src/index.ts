@@ -12,11 +12,6 @@ import {
 } from "discord.js";
 
 async function main() {
-  const discordToken = process.env.DISCORD_TOKEN;
-  if (!discordToken) {
-    throw new Error("Undefined DISCORD_TOKEN");
-  }
-
   // Setup initial connection with the database
   await getMongoClient();
 
@@ -47,15 +42,27 @@ async function main() {
         status: PresenceUpdateStatus.Online,
       });
     } else {
-      console.log("Bot wasn't set online upon startup...");
+      console.error("[STARTUP] Bot wasn't set online upon startup...");
     }
-
-    console.log(`Logged in as ${readyClient.user.tag}`);
+    console.log(`[STARTUP] Logged in as ${readyClient.user.tag}`);
   });
 
   // Executing the slash commands
   discordClient.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
+
+    // User can only requests key in #api-key-request
+    const channelId = process.env.CHANNEL_ID;
+    if (!channelId) {
+      throw new Error("Undefined CHANNEL_ID");
+    }
+    if (!interaction.inGuild() || interaction.channelId !== channelId) {
+      await interaction.reply({
+        content: `This command can only be used in <#${channelId}>`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     const discordClient = interaction.client as DiscordClient;
     const commandName = interaction.commandName;
@@ -63,11 +70,15 @@ async function main() {
     const commandCooldowns = discordClient.cooldowns;
 
     if (!command) {
-      console.error(`Command ${commandName} not found!`);
+      console.error(`[ERROR] Command ${commandName} not found!`);
       return;
     }
 
     try {
+      console.log(
+        `[REQUEST] User ${interaction.user.username}/(${interaction.user.id}) requests /${commandName}`,
+      );
+
       // Cooldown logic
       let timestamps = commandCooldowns.get(command.data.name);
 
@@ -78,7 +89,6 @@ async function main() {
 
       const now = Date.now();
       const userId = interaction.user.id;
-
       const expirationTime = timestamps.get(userId);
 
       if (expirationTime && now < expirationTime) {
@@ -95,7 +105,7 @@ async function main() {
 
       const bot = interaction.client.user;
       // If the bot is offline, user can't command it except for admin waking it up
-      if (commandName !== "sleep-or-wake" && bot.presence.status !== "online") {
+      if (commandName !== "wake" && bot.presence.status !== "online") {
         const user = interaction.user;
         await interaction.reply({
           content: `Hello <@${user.id}>! I'm currently offline, please comeback later.`,
@@ -105,7 +115,7 @@ async function main() {
       }
       await command.execute(interaction);
     } catch (error) {
-      console.error(error);
+      console.error(`[ERROR] Error while executing /${commandName}:`, error);
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
           content: "Error while executing this command!",
@@ -128,16 +138,19 @@ async function main() {
     const customId = interaction.customId;
     const modalSubmit = interactionClient.modalSubmits.get(customId);
     if (!modalSubmit) {
-      console.error(`Modal ${customId} not found!`);
+      console.error(`[ERROR] Modal ${customId} not found!`);
       return;
     }
 
     try {
       // Modal only pops up after slash command's execution which will not be executed when bot is offline,
       // no need to check for bot's status.
+      console.log(
+        `[REQUEST] User ${interaction.user.username}/(${interaction.user.id}) submits ${customId}`,
+      );
       await modalSubmit.execute(interaction);
     } catch (error) {
-      console.error(error);
+      console.error(`[ERROR] Error while executing modal ${customId}:`, error);
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
           content: "Error while executing this modal submit!",
@@ -152,13 +165,16 @@ async function main() {
     }
   });
 
+  const discordToken = process.env.DISCORD_TOKEN;
+  if (!discordToken) {
+    throw new Error("Undefined DISCORD_TOKEN");
+  }
   discordClient.login(discordToken);
 }
 
 try {
   await main();
 } catch (err) {
-  console.log(`Error starting up the bot: ${err}`);
-  console.log("Program terminating");
+  console.error(`[ERROR] Error starting up the bot: ${err}`);
   process.exit(1);
 }
