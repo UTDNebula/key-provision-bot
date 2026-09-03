@@ -279,7 +279,9 @@ const provisionKeyModalSubmit: ModalSubmit = {
     const user = interaction.user;
     const fields = interaction.fields;
     const projectName = fields.getTextInputValue("projName");
-    await interaction.reply(`Hello <@${user.id}>! We received your request. We'll DM you later.`);
+    await interaction.reply(
+      `Hello <@${user.id}>! We received your request. We'll DM you later.`,
+    );
 
     const { key, isNewlyCreated } = await provisionKey(
       user.id,
