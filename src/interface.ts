@@ -45,5 +45,5 @@ export type KeyProvision = {
   username: string;
   project: string;
   description: string;
-  key: string;
+  encryptedKey: string;
 };

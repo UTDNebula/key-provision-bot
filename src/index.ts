@@ -1,4 +1,4 @@
-import { getCommands, getModalSubmits, getClient } from "@/utils.ts";
+import { getCommands, getModalSubmits, getMongoClient } from "@/utils.ts";
 import type { DiscordClient } from "@/interface.ts";
 import "dotenv/config";
 import {
@@ -18,7 +18,7 @@ async function main() {
   }
 
   // Setup initial connection with the database
-  await getClient();
+  await getMongoClient();
 
   // Init the Discord client from the token
   const discordClient = new Client({
