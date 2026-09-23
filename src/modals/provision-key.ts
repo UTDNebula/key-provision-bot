@@ -222,8 +222,8 @@ async function rollbackKey(cloudKeyName: string) {
  * This just generates random key.
  */
 async function devCreateKey(): Promise<string> {
-  const GCLOUD_KEY_BYTES = 36;
-  return randomBytes(GCLOUD_KEY_BYTES).toString("hex");
+  const fake = randomBytes(36).toString("hex");
+  return `AIzaSy${fake}`;
 }
 
 /**
