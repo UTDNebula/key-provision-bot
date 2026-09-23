@@ -1,7 +1,7 @@
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
-import { KeyProvision, ModalSubmit } from "@/interface.ts";
+import { CreatedKey, KeyProvision, ModalSubmit } from "@/interface.ts";
 import { getKeyProvisionCollection } from "@/utils.ts";
 import CryptoJS from "crypto-js";
 import { randomBytes } from "node:crypto";
@@ -99,10 +99,11 @@ async function getAPIConfig(): Promise<APIConfig> {
  *
  * Refer to https://docs.cloud.google.com/api-keys/docs/create-manage-api-keys on how to create Google Cloud API key through REST
  */
+
 async function prodCreateKey(
   username: string,
   project: string,
-): Promise<string> {
+): Promise<CreatedKey> {
   const { baseUrl, projectId, service, accessToken } = await getAPIConfig();
 
   // Define the display name and restrict the key to only use Nebula API
@@ -157,7 +158,10 @@ async function prodCreateKey(
     attempt++;
   }
 
-  return keyDetails.response.keyString;
+  return {
+    keyName: keyDetails.response.name.split("/").pop(),
+    keyString: keyDetails.response.keyString,
+  };
 }
 
 /**
@@ -237,11 +241,15 @@ async function createAndPersistKey(
   apiPurpose: readonly string[],
 ): Promise<string> {
   let cloudKeyName = "";
+  let createdKey = "";
 
-  const createdKey =
-    process.env.USE_GCLOUD === "true"
-      ? (cloudKeyName = await prodCreateKey(username, project))
-      : await devCreateKey();
+  if (process.env.USE_GCLOUD === "true") {
+    const result: CreatedKey = await prodCreateKey(username, project);
+    cloudKeyName = result.keyName;
+    createdKey = result.keyString;
+  } else {
+    createdKey = await devCreateKey();
+  }
 
   // Save the provision record to the database
   const collection = await getKeyProvisionCollection();
