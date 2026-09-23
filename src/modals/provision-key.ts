@@ -161,6 +161,63 @@ async function prodCreateKey(
 }
 
 /**
+ * Deletes a Google Cloud KMS key by name and waits until the deletion
+ *
+ * Refer to https://docs.cloud.google.com/api-keys/docs/create-manage-api-keys on how to mange Google Cloud API key through REST
+ */
+async function rollbackKey(cloudKeyName: string) {
+  const { baseUrl, projectId, accessToken } = await getAPIConfig();
+
+  let response = await fetch(
+    `${baseUrl}/projects/${projectId}/locations/global/keys/${cloudKeyName}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "x-goog-user-project": projectId,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status} deleting key!`);
+  }
+
+  // Poll the operation until key is deleted
+  const data = await response.json();
+  let opDetails: any = {};
+  if (data.name) {
+    let attempt = 0;
+
+    while (!("done" in opDetails && opDetails.done == true)) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+
+      const pollRes = await fetch(`${baseUrl}/${data.name}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "x-goog-user-project": projectId,
+        },
+      });
+      if (!pollRes.ok) {
+        throw new Error(`HTTP error ${pollRes.status} polling delete!`);
+      }
+
+      opDetails = await pollRes.json();
+      attempt++;
+    }
+  }
+
+  if (opDetails.error) {
+    throw new Error(
+      `Delete operation failed: ${JSON.stringify(opDetails.error)}`,
+    );
+  }
+}
+
+/**
  * Test version of `createKey`, used in dev environment to avoid hitting GCloud.
  * This just generates random key.
  */
@@ -179,9 +236,11 @@ async function createAndPersistKey(
   description: string,
   apiPurpose: readonly string[],
 ): Promise<string> {
+  let cloudKeyName = "";
+
   const createdKey =
     process.env.USE_GCLOUD === "true"
-      ? await prodCreateKey(username, project)
+      ? (cloudKeyName = await prodCreateKey(username, project))
       : await devCreateKey();
 
   // Save the provision record to the database
@@ -198,6 +257,17 @@ async function createAndPersistKey(
   const insertedDoc = await collection.insertOne(doc);
 
   if (!insertedDoc.acknowledged) {
+    try {
+      await rollbackKey(cloudKeyName);
+    } catch (rollbackErr) {
+      console.error(
+        `Rollback of ${cloudKeyName} failed after DB insert failure:`,
+        rollbackErr,
+      );
+      throw new Error(
+        `Error inserting provision to DB; rollback also failed for ${cloudKeyName}`,
+      );
+    }
     throw new Error("Error inserting provision to DB");
   }
 
@@ -211,7 +281,6 @@ type ProvisionResults = {
 
 /** Inflight map from a user to a provisioning to control concurrency */
 const inflightProvisions = new Map<string, Promise<ProvisionResults>>();
-
 /**
  * See singleflight pattern, which is technically a Go concept but the idea is tranferrable
  * to other languages.
