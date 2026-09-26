@@ -14,8 +14,7 @@ import type { Command } from "@/interface.ts";
 const sleepCommand: Command = {
   data: new SlashCommandBuilder()
     .setName("sleep")
-    .setDescription("Wake the key provision bot")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDescription("Wake the key provision bot"),
 
   async execute(interaction) {
     const bot = interaction.client.user;
