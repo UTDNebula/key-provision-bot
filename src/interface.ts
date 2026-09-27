@@ -52,7 +52,7 @@ export type KeyProvision = {
 /**
  * Information about created key response from gcp
  */
-export type CreatedKey {
-  keyName: string
-  keyString: string
-}
+export type CreatedKey = {
+  keyName: string;
+  keyString: string;
+};
