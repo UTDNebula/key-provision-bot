@@ -265,18 +265,23 @@ async function createAndPersistKey(
   const insertedDoc = await collection.insertOne(doc);
 
   if (!insertedDoc.acknowledged) {
+    console.error(
+      `[ERROR] DB insertion not acknowledged for user ${username}, key ${cloudKeyName}; rolling back...`,
+    );
     try {
       await rollbackKey(cloudKeyName);
+      console.error(`[ERROR] Rollback succeeded for key ${cloudKeyName}`);
     } catch (rollbackErr) {
       console.error(
-        `Rollback of ${cloudKeyName} failed after DB insert failure:`,
+        `[ERROR] Rollback failed for key ${cloudKeyName}:`,
         rollbackErr,
       );
       throw new Error(
-        `Error inserting provision to DB; rollback also failed for ${cloudKeyName}`,
+        `DB insert failed and rollback failed for key ${cloudKeyName}`,
+        { cause: rollbackErr },
       );
     }
-    throw new Error("Error inserting provision to DB");
+    throw new Error(`DB insert failed for user ${userId}`);
   }
 
   return createdKey;
