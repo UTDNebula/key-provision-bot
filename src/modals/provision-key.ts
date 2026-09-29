@@ -2,10 +2,9 @@ import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
 import { CreatedKey, KeyProvision, ModalSubmit } from "@/interface.ts";
-import { getKeyProvisionCollection } from "@/utils.ts";
+import { getKeyProvisionCollection, pollOperation } from "@/utils.ts";
 import CryptoJS from "crypto-js";
 import { randomBytes } from "node:crypto";
-
 /**
  * Encrypt the provisioned API key using AES-256 algorithm
  */
@@ -133,29 +132,19 @@ async function prodCreateKey(
     throw new Error(`HTTP error ${response.status} creating key!`);
   }
   const data = await response.json();
-  const operation: string = data.name;
 
-  // Poll the operations until user gets the key
-  let keyDetails: any = {};
-  let attempt = 0;
-  while (!("done" in keyDetails && keyDetails.done === true)) {
-    if (attempt > 0) {
-      // Start waiting from the second attempt
-      await new Promise((r) => setTimeout(r, 5000));
-    }
+  const keyDetails = await pollOperation(
+    baseUrl,
+    data.name,
+    accessToken,
+    projectId,
+    "Creating key in google cloud",
+  );
 
-    response = await fetch(`${baseUrl}/${operation}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "x-goog-user-project": projectId,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status} polling key!`);
-    }
-    keyDetails = await response.json();
-    attempt++;
+  if (keyDetails.error) {
+    throw new Error(
+      `Delete operation failed: ${JSON.stringify(keyDetails.error)}`,
+    );
   }
 
   return {
@@ -187,36 +176,19 @@ async function rollbackKey(cloudKeyName: string) {
     throw new Error(`HTTP error ${response.status} deleting key!`);
   }
 
-  // Poll the operation until key is deleted
   const data = await response.json();
-  let opDetails: any = {};
-  if (data.name) {
-    let attempt = 0;
 
-    while (!("done" in opDetails && opDetails.done == true)) {
-      if (attempt > 0) {
-        await new Promise((r) => setTimeout(r, 5000));
-      }
+  const deletionDetails = await pollOperation(
+    baseUrl,
+    data.name,
+    accessToken,
+    projectId,
+    "Rolling back key in google cloud",
+  );
 
-      const pollRes = await fetch(`${baseUrl}/${data.name}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "x-goog-user-project": projectId,
-        },
-      });
-      if (!pollRes.ok) {
-        throw new Error(`HTTP error ${pollRes.status} polling delete!`);
-      }
-
-      opDetails = await pollRes.json();
-      attempt++;
-    }
-  }
-
-  if (opDetails.error) {
+  if (deletionDetails.error) {
     throw new Error(
-      `Delete operation failed: ${JSON.stringify(opDetails.error)}`,
+      `Delete operation failed: ${JSON.stringify(deletionDetails.error)}`,
     );
   }
 }
