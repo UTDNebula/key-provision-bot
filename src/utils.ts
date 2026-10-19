@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { Command, KeyProvision, ModalSubmit } from "@/interface.ts";
+import type { Command, APIKeyProvision, ModalSubmit } from "@/interface.ts";
 import { MongoClient, Collection } from "mongodb";
 import "dotenv/config";
 
@@ -14,24 +14,25 @@ const __dirname = path.dirname(__filename);
 export async function getCommands(): Promise<Command[]> {
   const commands: Command[] = [];
 
-  const foldersPath = path.join(__dirname, "commands");
-  const commandFolders = fs.readdirSync(foldersPath);
+  async function scan(dir: string): Promise<void> {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-  for (const folder of commandFolders) {
-    const commandPath = path.join(foldersPath, folder);
-    const commandFiles = fs
-      .readdirSync(commandPath)
-      .filter((file) => file.endsWith(".ts"));
-    for (const file of commandFiles) {
-      const filePath = path.join(commandPath, file);
-      const module = await import(pathToFileURL(filePath).href);
-      const command = module.default;
-      if ("data" in command && "execute" in command) {
-        commands.push(command);
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        await scan(fullPath);
+      } else if (entry.name.endsWith(".ts")) {
+        const module = await import(pathToFileURL(fullPath).href);
+        const command = module.default;
+        if (command && "data" in command && "execute" in command) {
+          commands.push(command);
+        }
       }
     }
   }
 
+  await scan(path.join(__dirname, "commands"));
   return commands;
 }
 
@@ -90,8 +91,8 @@ export async function getMongoClient(): Promise<MongoClient> {
  * Connect to the key provisions collection of database
  */
 export async function getKeyProvisionCollection(): Promise<
-  Collection<KeyProvision>
+  Collection<APIKeyProvision>
 > {
   const client = await getMongoClient();
-  return client.db("combinedDB").collection<KeyProvision>("keyProvisions");
+  return client.db("combinedDB").collection<APIKeyProvision>("keyProvisions");
 }
