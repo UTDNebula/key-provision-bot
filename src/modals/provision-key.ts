@@ -1,7 +1,7 @@
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
-import { KeyProvision, ModalSubmit } from "@/interface.ts";
+import { APIKeyProvision, ModalSubmit } from "@/interface.ts";
 import { getKeyProvisionCollection } from "@/utils.ts";
 import CryptoJS from "crypto-js";
 import { randomBytes } from "node:crypto";
@@ -193,7 +193,7 @@ async function createAndPersistKey(
     description: description,
     encryptedKey: encryptAPIKey(createdKey),
     apiPurpose: apiPurpose,
-  } as KeyProvision;
+  } as APIKeyProvision;
 
   const insertedDoc = await collection.insertOne(doc);
 

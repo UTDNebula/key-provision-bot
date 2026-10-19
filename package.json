@@ -8,7 +8,7 @@
     "lint:fix": "eslint . --fix",
     "format:check": "prettier . --check",
     "format:fix": "npx prettier . --write",
-    "discord": "tsx src/deploy-commands.ts && tsx src/index.ts",
+    "discord": "tsx src/deploy-commands.ts && tsx watch src/index.ts",
     "deploy": "tsx src/deploy-commands.ts"
   },
   "dependencies": {

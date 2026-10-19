@@ -22,6 +22,7 @@ async function deployCommands() {
   const serializedCommands: any[] = [];
   for (const command of await getCommands()) {
     serializedCommands.push(command.data.toJSON());
+    console.log(`[DEBUG] ${JSON.stringify(command.data)}`);
   }
 
   // Instance for REST API calling
