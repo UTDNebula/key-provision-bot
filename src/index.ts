@@ -175,6 +175,6 @@ async function main() {
 try {
   await main();
 } catch (err) {
-  console.error(`[ERROR] Error starting up the bot: ${err}`);
+  console.error("[ERROR] Error starting up the bot:", err);
   process.exit(1);
 }

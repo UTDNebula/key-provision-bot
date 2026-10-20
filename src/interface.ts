@@ -40,11 +40,28 @@ export interface DiscordClient extends Client {
 /**
  * Information about the key's provision
  */
-export type KeyProvision = {
+export type APIKeyProvision = {
   userId: string;
   username: string;
   project: string;
   description: string;
   encryptedKey: string;
   apiPurpose: string[];
+};
+
+/**
+ * Information about a a branch's provision
+ */
+export type Branch = {
+  name: string;
+  url: string;
+  project: string;
+  createdAt: Date;
+};
+
+export type BranchProvision = {
+  userId: string;
+  githubUserId: string;
+  githubUsername: string;
+  branches: Record<string, Branch>; // key === branch.name
 };

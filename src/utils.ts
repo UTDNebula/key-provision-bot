@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { Command, APIKeyProvision, ModalSubmit } from "@/interface.ts";
+import type {
+  Command,
+  APIKeyProvision,
+  ModalSubmit,
+  BranchProvision,
+} from "@/interface.ts";
 import { MongoClient, Collection } from "mongodb";
 import "dotenv/config";
 
@@ -95,4 +100,16 @@ export async function getKeyProvisionCollection(): Promise<
 > {
   const client = await getMongoClient();
   return client.db("combinedDB").collection<APIKeyProvision>("keyProvisions");
+}
+
+/**
+ * Connect to the branch collection of database
+ */
+export async function getBranchProvisionCollection(): Promise<
+  Collection<BranchProvision>
+> {
+  const client = await getMongoClient();
+  return client
+    .db("combinedDB")
+    .collection<BranchProvision>("branchProvisions");
 }
