@@ -8,8 +8,8 @@
     "lint:fix": "eslint . --fix",
     "format:check": "prettier . --check",
     "format:fix": "npx prettier . --write",
-    "discord": "tsx src/deploy-commands.ts && tsx watch src/index.ts",
-    "deploy": "tsx src/deploy-commands.ts"
+    "discord": "tsx src/bot/deploy-commands.ts && tsx watch src/index.ts",
+    "deploy": "tsx src/bot/deploy-commands.ts"
   },
   "dependencies": {
     "crypto": "^1.0.1",

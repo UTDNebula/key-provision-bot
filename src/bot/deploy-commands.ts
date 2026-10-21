@@ -1,5 +1,5 @@
 import { REST, Routes } from "discord.js";
-import { getCommands } from "@/utils.ts";
+import { getCommands } from "@/bot/utils.ts";
 import "dotenv/config";
 
 /**

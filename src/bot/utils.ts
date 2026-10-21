@@ -1,15 +1,21 @@
+import type {
+  APIKeyProvision,
+  BranchProvision,
+  Command,
+  ModalSubmit,
+} from "@/bot/interface.ts";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChatInputCommandInteraction,
+  MessageFlags,
+} from "discord.js";
+import "dotenv/config";
+import { Collection, MongoClient } from "mongodb";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type {
-  Command,
-  APIKeyProvision,
-  ModalSubmit,
-  BranchProvision,
-} from "@/interface.ts";
-import { MongoClient, Collection } from "mongodb";
-import "dotenv/config";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -112,4 +118,43 @@ export async function getBranchProvisionCollection(): Promise<
   return client
     .db("combinedDB")
     .collection<BranchProvision>("branchProvisions");
+}
+
+const GITHUB_LINKED_ROLE_ID = "1562301242548555927";
+
+/**
+ * Ensures the member has the GithubLinked role.
+ * Returns true if they already had it (or the prompt was sent),
+ * false if the interaction context was invalid.
+ */
+// FIXME: This github linked role does not ensure properly
+export async function ensureGithubLinkedRole(
+  interaction: ChatInputCommandInteraction,
+): Promise<boolean> {
+  if (!interaction.inCachedGuild()) {
+    return false;
+  }
+
+  const member = interaction.member;
+
+  if (member.roles.cache.has(GITHUB_LINKED_ROLE_ID)) {
+    return true;
+  }
+  // TODO: Something needs to happen upon hitting the button
+  console.log("Triggered");
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId("link_github_role")
+      .setLabel("Attach GithubLinked Role")
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  await interaction.reply({
+    content:
+      "You do not have the **GithubLinked** role yet. Please click the button below to attach it.",
+    components: [row],
+    flags: MessageFlags.Ephemeral,
+  });
+
+  return false;
 }

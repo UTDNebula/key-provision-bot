@@ -1,4 +1,5 @@
-import { Command } from "@/interface.ts";
+import { withGithubLinkedRole } from "@/bot/guards.ts";
+import { Command } from "@/bot/interface.ts";
 import {
   ModalBuilder,
   TextInputBuilder,
@@ -9,7 +10,7 @@ import {
 } from "discord.js";
 
 // Keep project list as a single source of truth so the handler
-// and the modal can't drift apart.
+// and the modal can't drift apart
 export const PROJECTS = [
   {
     label: "Clubs",
@@ -57,13 +58,12 @@ function buildRequestBranchForm(): ModalBuilder {
 }
 
 const requestBranchCommand: Command = {
-  cooldown: 120,
   data: new SlashCommandBuilder()
     .setName("request-branch")
     .setDescription("Request a database branch"),
-  async execute(interaction) {
+  execute: withGithubLinkedRole(async (interaction) => {
     await interaction.showModal(buildRequestBranchForm());
-  },
+  }),
 };
 
 export default requestBranchCommand;

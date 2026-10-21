@@ -6,13 +6,17 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 
+export type Execute = (
+  interaction: ChatInputCommandInteraction,
+) => Promise<void>;
+
 /**
  * Slash command
  */
 export type Command = {
   cooldown?: number;
   data: SlashCommandBuilder;
-  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+  execute: Execute;
 };
 
 /**
@@ -52,16 +56,16 @@ export type APIKeyProvision = {
 /**
  * Information about a a branch's provision
  */
-export type Branch = {
-  name: string;
-  url: string;
-  project: string;
-  createdAt: Date;
-};
-
 export type BranchProvision = {
   userId: string;
   githubUserId: string;
   githubUsername: string;
   branches: Record<string, Branch>; // key === branch.name
+};
+
+export type Branch = {
+  name: string;
+  url: string;
+  project: string;
+  createdAt: Date;
 };

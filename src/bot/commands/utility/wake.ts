@@ -4,7 +4,7 @@ import {
   PresenceUpdateStatus,
   SlashCommandBuilder,
 } from "discord.js";
-import type { Command } from "@/interface.ts";
+import type { Command } from "@/bot/interface.ts";
 
 /**
  * Command to go online.

@@ -6,7 +6,7 @@ import {
   TextInputStyle,
 } from "discord.js";
 import "dotenv/config";
-import type { Command } from "@/interface.ts";
+import type { Command } from "@/bot/interface.ts";
 
 /**
  * Build the form asking for project's usage of the API

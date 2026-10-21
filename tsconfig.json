@@ -6,14 +6,14 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
     },
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "ignoreDeprecations": "5.0"
+    "ignoreDeprecations": "5.0",
   },
-  "include": ["src"]
+  "include": ["src", "scripts"],
 }

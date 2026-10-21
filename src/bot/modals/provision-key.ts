@@ -1,8 +1,8 @@
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 import { GoogleAuth } from "google-auth-library";
 import "dotenv/config";
-import { APIKeyProvision, ModalSubmit } from "@/interface.ts";
-import { getKeyProvisionCollection } from "@/utils.ts";
+import { APIKeyProvision, ModalSubmit } from "@/bot/interface.ts";
+import { getKeyProvisionCollection } from "@/bot/utils.ts";
 import CryptoJS from "crypto-js";
 import { randomBytes } from "node:crypto";
 

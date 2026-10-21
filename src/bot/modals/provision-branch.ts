@@ -1,6 +1,6 @@
-import { PROJECTS } from "@/commands/key-management/branch/request-branch.ts";
-import { Branch, BranchProvision, ModalSubmit } from "@/interface.ts";
-import { getBranchProvisionCollection } from "@/utils.ts";
+import { PROJECTS } from "@/bot/commands/key-management/branch/request-branch.ts";
+import { Branch, BranchProvision, ModalSubmit } from "@/bot/interface.ts";
+import { getBranchProvisionCollection } from "@/bot/utils.ts";
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 
 // TODO: Add more logging to this script
@@ -46,7 +46,8 @@ const requestBranchModalSubmit: ModalSubmit = {
       return;
     }
 
-    // Branch name becomes a Mongo field path — keep it path-safe.
+    // Branch name becomes a Mongo field path
+    // Keep it name in a friendly file format for storage in neon
     if (!/^[a-zA-Z0-9_-]+$/.test(branchName)) {
       await interaction.reply({
         content: "Branch name may only contain letters, numbers, `-` and `_`.",
@@ -77,7 +78,7 @@ const requestBranchModalSubmit: ModalSubmit = {
     };
 
     try {
-      // Upsert: creates the user doc on first branch, appends on later ones.
+      // Creates the user doc on first branch, appends on later ones.
       const collection = await getBranchProvisionCollection();
       const result = await collection.updateOne(
         { userId: user.id },
