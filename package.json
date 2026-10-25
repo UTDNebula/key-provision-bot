@@ -9,13 +9,18 @@
     "format:check": "prettier . --check",
     "format:fix": "npx prettier . --write",
     "discord": "tsx src/bot/deploy-commands.ts && tsx watch src/index.ts",
-    "deploy": "tsx src/bot/deploy-commands.ts"
+    "deploy": "tsx src/bot/deploy-commands.ts",
+    "server": "tsx src/server/index.ts"
   },
   "dependencies": {
+    "@discordjs/rest": "^2.6.3",
+    "@octokit/rest": "^22.0.1",
     "crypto": "^1.0.1",
     "crypto-js": "^4.2.0",
+    "discord-api-types": "^0.38.57",
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
+    "express": "^5.3.0",
     "google-auth-library": "^10.6.2",
     "mongodb": "^7.2.0",
     "neon-branch-dashboard": "github:Isoscelestial/neon-branch-dashboard"
@@ -23,6 +28,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/crypto-js": "^4.2.2",
+    "@types/express": "^5.0.6",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-simple-import-sort": "^13.0.0",
     "prettier": "3.8.3",
