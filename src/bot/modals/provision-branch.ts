@@ -1,4 +1,4 @@
-import { PROJECTS } from "@/bot/commands/key-management/branch/request-branch.ts";
+import { PROJECTS } from "@/bot/commands/branch-management/request-branch.ts";
 import { Branch, BranchProvision, ModalSubmit } from "@/bot/interface.ts";
 import { getBranchProvisionCollection } from "@/bot/utils.ts";
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
@@ -46,7 +46,6 @@ const requestBranchModalSubmit: ModalSubmit = {
       return;
     }
 
-    // Branch name becomes a Mongo field path
     // Keep it name in a friendly file format for storage in neon
     if (!/^[a-zA-Z0-9_-]+$/.test(branchName)) {
       await interaction.reply({
