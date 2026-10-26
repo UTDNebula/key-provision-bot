@@ -1,4 +1,4 @@
-import { getCommands, getModalSubmits, getMongoClient } from "@/bot/utils.ts";
+import { getCommands, getModalSubmits } from "@/bot/utils.ts";
 import type { DiscordClient } from "@/bot/interface.ts";
 import "dotenv/config";
 import {
@@ -10,6 +10,7 @@ import {
   MessageFlags,
   PresenceUpdateStatus,
 } from "discord.js";
+import { getMongoClient } from "@/shared/db.ts";
 
 export async function startBot() {
   // Setup initial connection with the database

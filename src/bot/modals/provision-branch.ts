@@ -1,6 +1,6 @@
 import { PROJECTS } from "@/bot/commands/branch-management/request-branch.ts";
 import { Branch, BranchProvision, ModalSubmit } from "@/bot/interface.ts";
-import { getBranchProvisionCollection } from "@/bot/utils.ts";
+import { getBranchProvisionCollection } from "@/shared/db.ts";
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 
 // TODO: Add more logging to this script
@@ -18,7 +18,7 @@ function provisionBranch() {}
  */
 async function checkExistingBranch(
   userId: string,
-  branchName: string, // was `url` — the map is keyed by name, not url
+  branchName: string,
 ): Promise<Branch | null> {
   const collection = await getBranchProvisionCollection();
 

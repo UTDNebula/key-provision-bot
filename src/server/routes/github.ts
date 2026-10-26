@@ -1,6 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { Router } from "express";
-import { exchangeGitHubCode, getGitHubUser } from "../services/githubApi.js";
+import {
+  checkOrganizationMembership,
+  exchangeGitHubCode,
+  getGitHubUser,
+} from "../services/githubApi.js";
+import { getAuthorizedUsersCollection } from "@/shared/db.ts";
 
 const router = Router();
 
@@ -84,7 +89,43 @@ router.get("/auth/github/callback", async (req, res) => {
     // Token -> user stats
     const stats = await getGitHubUser(accessToken);
 
-    return res.json({ github: stats, discordUserId: pending.discordUserId });
+    const orgName = process.env.GITHUB_ORG_NAME;
+
+    if (!orgName) {
+      console.warn("GITHUB_ORG_NAME not set; skipping org membership check");
+      return res.status(500).json({ error: "Server misconfigured" });
+    }
+
+    // Check org membership
+    const isMember = await checkOrganizationMembership(
+      accessToken,
+      process.env.GITHUB_ORG_NAME ?? "",
+    );
+    if (!isMember) {
+      return res
+        .status(403)
+        .json({ error: "Organization membership required" });
+    }
+
+    // Persist for the bot to read
+    const authorized = await getAuthorizedUsersCollection();
+    await authorized.updateOne(
+      { githubId: String(stats.id) },
+      {
+        $set: {
+          githubId: String(stats.id),
+          login: stats.login,
+          discordUserId: pending.discordUserId,
+          verifiedAt: new Date(),
+          revokedAt: null,
+        },
+      },
+      { upsert: true },
+    );
+
+    return res.redirect(
+      process.env.OAUTH_SUCCESS_URL ?? "https://discord.com/channels/@me",
+    );
   } catch (err) {
     console.error("GitHub OAuth callback failed:", err);
     return res.status(502).json({ error: "GitHub OAuth request failed" });
