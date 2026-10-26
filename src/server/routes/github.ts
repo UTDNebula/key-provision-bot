@@ -6,6 +6,7 @@ import {
   getGitHubUser,
 } from "../services/githubApi.js";
 import { getAuthorizedUsersCollection } from "@/shared/db.ts";
+import { StatusCodes } from "http-status-codes";
 
 const router = Router();
 
@@ -26,15 +27,19 @@ router.get("/auth/github", (req, res) => {
       : "";
 
   if (!clientId || !callbackUrl) {
-    return res.status(500).json({ error: "GitHub OAuth is not configured" });
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "GitHub OAuth is not configured" });
   }
   if (!discordUserId) {
-    return res.status(400).json({ error: "Missing discord_user_id" });
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ error: "Missing discord_user_id" });
   }
 
   const now = Date.now();
 
-  // Opportunistic sweep of expired states
+  // Sweep of expired states
   for (const [s, pending] of oauthStates) {
     if (pending.expiresAt <= now) oauthStates.delete(s);
   }
@@ -62,10 +67,14 @@ router.get("/auth/github/callback", async (req, res) => {
   oauthStates.delete(state); // single-use
 
   if (!pending || pending.expiresAt <= Date.now()) {
-    return res.status(400).json({ error: "Invalid or expired OAuth state" });
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ error: "Invalid or expired OAuth state" });
   }
   if (typeof req.query.error === "string") {
-    return res.status(400).json({ error: "GitHub authorization was denied" });
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ error: "GitHub authorization was denied" });
   }
 
   const code = typeof req.query.code === "string" ? req.query.code : "";
@@ -73,9 +82,13 @@ router.get("/auth/github/callback", async (req, res) => {
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
 
   if (!code)
-    return res.status(400).json({ error: "Missing authorization code" });
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ error: "Missing authorization code" });
   if (!clientId || !clientSecret) {
-    return res.status(500).json({ error: "GitHub OAuth is not configured" });
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: "GitHub OAuth is not configured" });
   }
 
   try {
@@ -93,7 +106,9 @@ router.get("/auth/github/callback", async (req, res) => {
 
     if (!orgName) {
       console.warn("GITHUB_ORG_NAME not set; skipping org membership check");
-      return res.status(500).json({ error: "Server misconfigured" });
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ error: "Server misconfigured" });
     }
 
     // Check org membership
@@ -103,7 +118,7 @@ router.get("/auth/github/callback", async (req, res) => {
     );
     if (!isMember) {
       return res
-        .status(403)
+        .status(StatusCodes.UNAUTHORIZED)
         .json({ error: "Organization membership required" });
     }
 
@@ -128,7 +143,9 @@ router.get("/auth/github/callback", async (req, res) => {
     );
   } catch (err) {
     console.error("GitHub OAuth callback failed:", err);
-    return res.status(502).json({ error: "GitHub OAuth request failed" });
+    return res
+      .status(StatusCodes.BAD_GATEWAY)
+      .json({ error: "GitHub OAuth request failed" });
   }
 });
 
