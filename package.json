@@ -8,7 +8,7 @@
     "lint:fix": "eslint . --fix",
     "format:check": "prettier . --check",
     "format:fix": "npx prettier . --write",
-    "discord": "tsx src/bot/deploy-commands.ts && tsx watch src/index.ts",
+    "discord": "tsx src/bot/deploy-commands.ts && tsx src/index.ts",
     "deploy": "tsx src/bot/deploy-commands.ts",
     "server": "tsx src/server/index.ts"
   },
@@ -35,5 +35,8 @@
     "prettier": "3.8.3",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.22.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }

@@ -1,4 +1,4 @@
-import { withGithubLinkedRole } from "@/bot/guards.ts";
+import { withGithubVerified } from "@/bot/guards.ts";
 import { Command } from "@/bot/interface.ts";
 import {
   ModalBuilder,
@@ -61,7 +61,7 @@ const requestBranchCommand: Command = {
   data: new SlashCommandBuilder()
     .setName("request-branch")
     .setDescription("Request a database branch"),
-  execute: withGithubLinkedRole(async (interaction) => {
+  execute: withGithubVerified(async (interaction) => {
     await interaction.showModal(buildRequestBranchForm());
   }),
 };

@@ -10,8 +10,6 @@ export async function startServer() {
   app.use(githubRouter);
 
   app.listen(port, () => {
-    console.log(`OAuth server listening on port ${port}`);
+    console.log(`[SERVER] OAuth server listening on port ${port}`);
   });
 }
-
-startServer();
