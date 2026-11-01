@@ -4,9 +4,20 @@ import { Execute } from "./interface.ts";
 
 export function withGithubVerified(execute: Execute): Execute {
   return async (interaction) => {
+    console.log("[AUTH] Wrapper entered");
+
     const ok = await ensureGithubVerified(interaction);
-    if (!ok) return;
-    return execute(interaction);
+
+    console.log("[AUTH] Result:", ok);
+
+    if (ok !== true) {
+      console.log("[AUTH] BLOCKED");
+      return;
+    }
+
+    console.log("[AUTH] PASSED - Executing command");
+
+    await execute(interaction);
   };
 }
 

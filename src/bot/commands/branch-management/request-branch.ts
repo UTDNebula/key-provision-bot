@@ -11,13 +11,30 @@ import {
 
 // Keep project list as a single source of truth so the handler
 // and the modal can't drift apart
+export type Project = {
+  label: string;
+  value: string;
+  description: string;
+  neonProjectId: string;
+  productionDatabaseURL?: string;
+};
+
 export const PROJECTS = [
   {
     label: "Clubs",
     value: "clubs",
-    description: "A database branch for clubs",
+    description: "A database branch for Clubs",
+    neonProjectId: process.env.CLUBS_NEON_PROJECT_ID!,
+    productionDatabaseURL: process.env.CLUBS_PRODUCTION_DATABASE_URL,
   },
-] as const;
+  {
+    label: "Notebook",
+    value: "notebook",
+    description: "A database branch for Notebook",
+    neonProjectId: process.env.NOTEBOOK_NEON_PROJECT_ID!,
+    productionDatabaseURL: process.env.NOTEBOOK_PRODUCTION_DATABASE_URL,
+  },
+] as const satisfies Project[];
 
 export type ProjectValue = (typeof PROJECTS)[number]["value"];
 
@@ -29,7 +46,7 @@ function buildRequestBranchForm(): ModalBuilder {
     .setMaxLength(80);
 
   const nameLabel = new LabelBuilder()
-    .setLabel("What is this key's name name?")
+    .setLabel("What is this key's name?")
     .setDescription("Anything! It's used for naming your branch's use case.")
     .setTextInputComponent(nameInput);
 

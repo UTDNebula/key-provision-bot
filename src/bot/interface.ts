@@ -60,12 +60,13 @@ export type BranchProvision = {
   userId: string;
   githubUserId: string;
   githubUsername: string;
-  branches: Record<string, Branch>; // key === branch.name
+  branches: BranchMetadata[];
 };
 
-export type Branch = {
-  name: string;
-  url: string;
+export type BranchMetadata = {
+  branchId: string;
+  index: number;
   project: string;
   createdAt: Date;
+  lastFetchedAt: Date;
 };

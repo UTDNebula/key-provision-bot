@@ -1,5 +1,5 @@
 import { PROJECTS } from "@/bot/commands/branch-management/request-branch.ts";
-import { Branch, BranchProvision, ModalSubmit } from "@/bot/interface.ts";
+import { BranchMetadata, ModalSubmit } from "@/bot/interface.ts";
 import { getBranchProvisionCollection } from "@/shared/db.ts";
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 
@@ -18,15 +18,14 @@ function provisionBranch() {}
  */
 async function checkExistingBranch(
   userId: string,
-  branchName: string,
-): Promise<Branch | null> {
+): Promise<BranchMetadata | null> {
   const collection = await getBranchProvisionCollection();
 
   const doc = await collection.findOne({ userId: userId });
   if (!doc) {
     return null;
   }
-  return doc.branches[branchName] ?? null;
+  return doc.branches[0] ?? null;
 }
 
 const requestBranchModalSubmit: ModalSubmit = {
@@ -56,9 +55,9 @@ const requestBranchModalSubmit: ModalSubmit = {
     }
 
     // TODO: Replace this with a provisionBranch method that utilizes Clubs DB script
-    const existing = await checkExistingBranch(user.id, branchName);
+    const existing = await checkExistingBranch(user.id);
     const { url, isNewlyCreated } = existing
-      ? { url: existing.url, isNewlyCreated: false }
+      ? { url: existing.project, isNewlyCreated: false }
       : { url: "examplekey", isNewlyCreated: true };
 
     if (!isNewlyCreated) {
