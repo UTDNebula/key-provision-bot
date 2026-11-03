@@ -1,18 +1,5 @@
-import type {
-  APIKeyProvision,
-  BranchProvision,
-  Command,
-  ModalSubmit,
-} from "@/bot/interface.ts";
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  ChatInputCommandInteraction,
-  MessageFlags,
-} from "discord.js";
+import type { Command, ModalSubmit } from "@/bot/interface.ts";
 import "dotenv/config";
-import { Collection, MongoClient } from "mongodb";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";

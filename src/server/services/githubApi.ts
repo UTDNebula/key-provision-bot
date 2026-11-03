@@ -1,5 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import { exchangeWebFlowCode } from "@octokit/oauth-methods";
+import { StatusCodes } from "http-status-codes";
 
 // TODO: I should cache this like mongoClient
 // Metadata for discord
@@ -64,7 +65,7 @@ export async function checkOrganizationMembership(
 
     return data.state === "active";
   } catch (error: any) {
-    if (error.status === 404) {
+    if (error.status === StatusCodes.NOT_FOUND) {
       return false; // not a member
     }
     throw error;
