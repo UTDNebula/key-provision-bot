@@ -3,6 +3,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import NeonProviderClient from "./db-brancher/providers/Neon.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -55,4 +56,28 @@ export async function getModalSubmits(): Promise<ModalSubmit[]> {
   }
 
   return modalSubmits;
+}
+
+let cachedNeonProvider: NeonProviderClient | null = null;
+
+export function getNeonProvider(): NeonProviderClient {
+  const neonApiKey = process.env.NEON_API_KEY;
+  if (!neonApiKey) {
+    throw new Error("Undefined NEON_API_KEY");
+  }
+  const projectId = process.env.NEON_PROJECT_ID;
+  if (!projectId) {
+    throw new Error("Undefined NEON_PROJECT_ID");
+  }
+
+  if (!cachedNeonProvider) {
+    cachedNeonProvider = new NeonProviderClient({
+      apiKey: neonApiKey,
+      projectId: projectId,
+    });
+
+    return cachedNeonProvider;
+  }
+
+  return cachedNeonProvider;
 }
