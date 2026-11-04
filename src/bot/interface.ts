@@ -70,3 +70,33 @@ export type BranchMetadata = {
   createdAt: Date;
   lastFetchedAt: Date;
 };
+
+/**
+ * Projects we support from nebula organization
+ */
+export type Project = {
+  label: string;
+  value: string;
+  description: string;
+  neonProjectId: string;
+  productionDatabaseURL?: string;
+};
+
+export const PROJECTS = [
+  {
+    label: "Clubs",
+    value: "clubs",
+    description: "A database branch for Clubs",
+    neonProjectId: process.env.CLUBS_NEON_PROJECT_ID!,
+    productionDatabaseURL: process.env.CLUBS_PRODUCTION_DATABASE_URL,
+  },
+  {
+    label: "Notebook",
+    value: "notebook",
+    description: "A database branch for Notebook",
+    neonProjectId: process.env.NOTEBOOK_NEON_PROJECT_ID!,
+    productionDatabaseURL: process.env.NOTEBOOK_PRODUCTION_DATABASE_URL,
+  },
+] as const satisfies Project[];
+
+export type ProjectValue = (typeof PROJECTS)[number]["value"];

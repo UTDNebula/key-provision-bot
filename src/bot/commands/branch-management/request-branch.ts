@@ -1,5 +1,5 @@
 import { withGithubVerified } from "@/bot/guards.ts";
-import { Command } from "@/bot/interface.ts";
+import { Command, PROJECTS } from "@/bot/interface.ts";
 import {
   ModalBuilder,
   TextInputBuilder,
@@ -8,35 +8,6 @@ import {
   StringSelectMenuBuilder,
   SlashCommandBuilder,
 } from "discord.js";
-
-// Keep project list as a single source of truth so the handler
-// and the modal can't drift apart
-export type Project = {
-  label: string;
-  value: string;
-  description: string;
-  neonProjectId: string;
-  productionDatabaseURL?: string;
-};
-
-export const PROJECTS = [
-  {
-    label: "Clubs",
-    value: "clubs",
-    description: "A database branch for Clubs",
-    neonProjectId: process.env.CLUBS_NEON_PROJECT_ID!,
-    productionDatabaseURL: process.env.CLUBS_PRODUCTION_DATABASE_URL,
-  },
-  {
-    label: "Notebook",
-    value: "notebook",
-    description: "A database branch for Notebook",
-    neonProjectId: process.env.NOTEBOOK_NEON_PROJECT_ID!,
-    productionDatabaseURL: process.env.NOTEBOOK_PRODUCTION_DATABASE_URL,
-  },
-] as const satisfies Project[];
-
-export type ProjectValue = (typeof PROJECTS)[number]["value"];
 
 function buildRequestBranchForm(): ModalBuilder {
   const nameInput = new TextInputBuilder()

@@ -1,5 +1,4 @@
-import { PROJECTS } from "@/bot/commands/branch-management/request-branch.ts";
-import { BranchMetadata, ModalSubmit } from "@/bot/interface.ts";
+import { BranchMetadata, ModalSubmit, PROJECTS } from "@/bot/interface.ts";
 import { getAuthorizedUsersCollection } from "@/shared/db.ts";
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 import { user } from "../db-brancher/identifiers/UserIdentifier.ts";
