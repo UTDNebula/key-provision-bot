@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import NeonProviderClient from "./db-brancher/providers/Neon.ts";
+import BrancherDBClient from "./db-brancher/BrancherDBClient.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -58,9 +59,9 @@ export async function getModalSubmits(): Promise<ModalSubmit[]> {
   return modalSubmits;
 }
 
-let cachedNeonProvider: NeonProviderClient | null = null;
+let cachedBrancherClient: BrancherDBClient<NeonProviderClient> | null = null;
 
-export function getNeonProvider(): NeonProviderClient {
+export function getBrancherClient(): BrancherDBClient<NeonProviderClient> {
   const neonApiKey = process.env.NEON_API_KEY;
   if (!neonApiKey) {
     throw new Error("Undefined NEON_API_KEY");
@@ -70,14 +71,14 @@ export function getNeonProvider(): NeonProviderClient {
     throw new Error("Undefined NEON_PROJECT_ID");
   }
 
-  if (!cachedNeonProvider) {
-    cachedNeonProvider = new NeonProviderClient({
+  if (!cachedBrancherClient) {
+    const branchProvider = new NeonProviderClient({
       apiKey: neonApiKey,
       projectId: projectId,
     });
 
-    return cachedNeonProvider;
+    cachedBrancherClient = new BrancherDBClient(branchProvider);
   }
 
-  return cachedNeonProvider;
+  return cachedBrancherClient;
 }
