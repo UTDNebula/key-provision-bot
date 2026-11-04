@@ -3,8 +3,9 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import NeonProviderClient from "./db-brancher/providers/Neon.ts";
 import BrancherDBClient from "./db-brancher/BrancherDBClient.ts";
+import NeonProviderClient from "./db-brancher/providers/Neon.ts";
+import { Branch } from "@neon/sdk";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -59,9 +60,9 @@ export async function getModalSubmits(): Promise<ModalSubmit[]> {
   return modalSubmits;
 }
 
-let cachedBrancherClient: BrancherDBClient<NeonProviderClient> | null = null;
+let cachedBrancherClient: BrancherDBClient<Branch> | null = null;
 
-export function getBrancherClient(): BrancherDBClient<NeonProviderClient> {
+export function getBrancherClient(): BrancherDBClient<Branch> {
   const neonApiKey = process.env.NEON_API_KEY;
   if (!neonApiKey) {
     throw new Error("Undefined NEON_API_KEY");
