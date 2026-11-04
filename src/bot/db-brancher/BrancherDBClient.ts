@@ -1,10 +1,10 @@
-import { dev } from '@/utils/templates';
 import {
   BranchIdentifier,
   BranchIdentifierFields,
-} from '@/identifiers/BranchIdentifier';
-import { UserIdentifier } from '@/identifiers/UserIdentifier';
-import BranchProviderClient from '@/providers/BranchProviderClient';
+} from "./identifiers/BranchIdentifier.ts";
+import { UserIdentifier } from "./identifiers/UserIdentifier.ts";
+import BranchProviderClient from "./providers/BranchProviderClient.ts";
+import { dev } from "./utils/templates.ts";
 
 const slotRegex = /(?<=^[^\s]*#)\d+/;
 
@@ -23,7 +23,7 @@ export type BrancherDBClientOptions = {
    *
    * @default 'smallest'
    */
-  nextUnusedSlotMethod?: 'smallest' | 'iterate';
+  nextUnusedSlotMethod?: "smallest" | "iterate";
 };
 
 export default class BrancherDBClient<
@@ -107,22 +107,22 @@ export default class BrancherDBClient<
        */
       getNextUnusedSlotForUser: async (
         userIdentifier: UserIdentifier,
-        nextUnusedSlotMethod?: BrancherDBClientOptions['nextUnusedSlotMethod'],
+        nextUnusedSlotMethod?: BrancherDBClientOptions["nextUnusedSlotMethod"],
       ): Promise<number> => {
         const usedSlots = await this.$util.getUsedSlotsForUser(userIdentifier);
         const method =
           nextUnusedSlotMethod ??
           this.#options.nextUnusedSlotMethod ??
-          'smallest';
+          "smallest";
 
         switch (method) {
-          case 'smallest': {
+          case "smallest": {
             // Does not include 0 because that corresponds to legacy branch name
             let slot = 1;
             while (usedSlots.includes(slot)) slot++;
             return slot;
           }
-          case 'iterate': {
+          case "iterate": {
             return Math.max(...usedSlots) + 1;
           }
           default:
@@ -183,7 +183,7 @@ export default class BrancherDBClient<
         const branchName = dev(githubUsername.toLowerCase());
         const escapedBranchName = branchName.replace(
           /[.*+?^${}()|[\]\\]/g,
-          '\\$&',
+          "\\$&",
         );
         const allPersonBranchesRegex = new RegExp(
           `^${escapedBranchName}(?=[# ]+|$)`,
@@ -235,7 +235,7 @@ export default class BrancherDBClient<
       createBranch: async (
         userIdentifier: UserIdentifier,
         note?: string,
-        nextUnusedSlotMethod?: BrancherDBClientOptions['nextUnusedSlotMethod'],
+        nextUnusedSlotMethod?: BrancherDBClientOptions["nextUnusedSlotMethod"],
       ): Promise<BranchType> => {
         const githubUsername = await userIdentifier.getGitHubUsername();
         const nextUnusedSlot = await this.$util.getNextUnusedSlotForUser(
@@ -273,7 +273,7 @@ export default class BrancherDBClient<
       createBranchAndConnect: async (
         userIdentifier: UserIdentifier,
         note?: string,
-        nextUnusedSlotMethod?: BrancherDBClientOptions['nextUnusedSlotMethod'],
+        nextUnusedSlotMethod?: BrancherDBClientOptions["nextUnusedSlotMethod"],
       ): Promise<string> => {
         const newBranch = await this.user.createBranch(
           userIdentifier,

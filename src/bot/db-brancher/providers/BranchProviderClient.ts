@@ -1,7 +1,7 @@
 import {
   BranchIdentifier,
   BranchIdentifierFields,
-} from '@/identifiers/BranchIdentifier';
+} from "../identifiers/BranchIdentifier.ts";
 
 export default abstract class BranchProviderClient<
   BranchType extends BranchIdentifierFields,

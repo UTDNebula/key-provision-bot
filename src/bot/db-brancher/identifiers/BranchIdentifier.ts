@@ -1,4 +1,4 @@
-import { OnlyOneRequired } from '@/utils/types';
+import { OnlyOneRequired } from "../utils/types.ts";
 
 export type BranchIdentifierFields = {
   id: string;
@@ -10,8 +10,8 @@ export function branch(identifier: OnlyOneRequired<BranchIdentifierFields>) {
 }
 
 export class BranchIdentifier {
-  #id: BranchIdentifierFields['id'] | undefined;
-  #name: BranchIdentifierFields['name'] | undefined;
+  #id: BranchIdentifierFields["id"] | undefined;
+  #name: BranchIdentifierFields["name"] | undefined;
 
   constructor(identifier: OnlyOneRequired<BranchIdentifierFields>) {
     this.#id = identifier.id;
@@ -20,7 +20,7 @@ export class BranchIdentifier {
 
   async getId(
     getBranches: () => Promise<BranchIdentifierFields[]>,
-  ): Promise<BranchIdentifierFields['id']> {
+  ): Promise<BranchIdentifierFields["id"]> {
     if (this.#id) {
       return this.#id;
     } else if (this.#name) {
@@ -31,12 +31,12 @@ export class BranchIdentifier {
         throw new Error(`Could not find branch with name "${targetName}"`);
       return result;
     }
-    throw new Error('Could not find ID of branch');
+    throw new Error("Could not find ID of branch");
   }
 
   async getName(
     getBranches: () => Promise<BranchIdentifierFields[]>,
-  ): Promise<BranchIdentifierFields['name']> {
+  ): Promise<BranchIdentifierFields["name"]> {
     if (this.#name) {
       return this.#name;
     } else if (this.#id) {
@@ -46,6 +46,6 @@ export class BranchIdentifier {
       if (!result) throw new Error(`Could not find branch with ID ${targetId}`);
       return result;
     }
-    throw new Error('Could not find name of branch');
+    throw new Error("Could not find name of branch");
   }
 }

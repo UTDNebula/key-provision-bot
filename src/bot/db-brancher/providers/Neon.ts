@@ -1,8 +1,6 @@
-import env from '../../__tests__/env';
-import { createNeonClient, NeonClient } from '@neon/sdk';
-import { Branch, NeonError } from '@neon/sdk';
-import BranchProviderClient from './BranchProviderClient';
-import { BranchIdentifier } from '@/identifiers/BranchIdentifier';
+import { Branch, createNeonClient, NeonClient, NeonError } from "@neon/sdk";
+import BranchProviderClient from "./BranchProviderClient.ts";
+import { BranchIdentifier } from "../identifiers/BranchIdentifier.ts";
 
 export type NeonProviderClientConfig = {
   apiKey: string;
@@ -24,7 +22,7 @@ export default class NeonProviderClient extends BranchProviderClient<Branch> {
       config.neonClient ?? createNeonClient({ apiKey: config.apiKey });
 
     this.config = config;
-    this.config.apiURL ??= 'https://console.neon.tech/api/v2';
+    this.config.apiURL ??= "https://console.neon.tech/api/v2";
   }
 
   async getAll(): Promise<Branch[]> {
@@ -39,9 +37,9 @@ export default class NeonProviderClient extends BranchProviderClient<Branch> {
     const res = await fetch(
       `${this.config.apiURL}/projects/${this.projectId}/branches?${params.toString()}`,
       {
-        method: 'GET',
+        method: "GET",
         headers: {
-          Accept: 'application/json',
+          Accept: "application/json",
           Authorization: `Bearer ${this.config.apiKey}`,
         },
       },
@@ -49,7 +47,7 @@ export default class NeonProviderClient extends BranchProviderClient<Branch> {
 
     if (!res.ok) {
       const error = await res.json();
-      throw new NeonError(error.message, 'api');
+      throw new NeonError(error.message, "api");
     }
 
     const data = await res.json();
@@ -82,7 +80,7 @@ export default class NeonProviderClient extends BranchProviderClient<Branch> {
       await this.neonClient.postgres.roles.resetPassword({
         projectId: this.projectId,
         branchId: branchId,
-        roleName: 'neondb_owner',
+        roleName: "neondb_owner",
       });
     if (resetPasswordError) {
       console.error(
@@ -90,7 +88,7 @@ export default class NeonProviderClient extends BranchProviderClient<Branch> {
         resetPasswordError,
       );
       console.warn(
-        'This connection string will have the same password as the default branch, which is more unsecure.',
+        "This connection string will have the same password as the default branch, which is more unsecure.",
       );
     }
   }
@@ -102,8 +100,8 @@ export default class NeonProviderClient extends BranchProviderClient<Branch> {
     const branchId = await branchIdentifier.getId(this.getAll);
     const { data: uri } = await this.neonClient.postgres.connectionString({
       projectId: this.projectId,
-      databaseName: 'neondb',
-      roleName: 'neondb_owner',
+      databaseName: "neondb",
+      roleName: "neondb_owner",
       branchId: branchId,
       pooled: pooled,
     });
