@@ -1,16 +1,12 @@
 import { PROJECTS } from "@/bot/commands/branch-management/request-branch.ts";
 import { BranchMetadata, ModalSubmit } from "@/bot/interface.ts";
-import { getBranchProvisionCollection } from "@/shared/db.ts";
+import { getAuthorizedUsersCollection } from "@/shared/db.ts";
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
-
+import { user } from "../db-brancher/identifiers/UserIdentifier.ts";
+import { getBrancherClient } from "../utils.ts";
 // TODO: Add more logging to this script
 
-const MAX_BRANCHES_PER_USER = 5;
-
-// TODO: DB Generation script will execute here
-// - Values will need to be filtered based on project branchName
-// - Check for duplicates
-function provisionBranch() {}
+const MAX_BRANCHES_PER_USER = 5; // TODO: Also should be handled branch side?
 
 /**
  * Check if this user has a provisioned branch with this name and returns it.
@@ -19,19 +15,14 @@ function provisionBranch() {}
 async function checkExistingBranch(
   userId: string,
 ): Promise<BranchMetadata | null> {
-  const collection = await getBranchProvisionCollection();
-
-  const doc = await collection.findOne({ userId: userId });
-  if (!doc) {
-    return null;
-  }
-  return doc.branches[0] ?? null;
+  // TODO: Checking logic
+  return null;
 }
 
 const requestBranchModalSubmit: ModalSubmit = {
   customId: "requestBranchModal",
   execute: async (interaction: ModalSubmitInteraction) => {
-    const user = interaction.user;
+    const discordUser = interaction.user;
     const fields = interaction.fields;
     const branchName = fields.getTextInputValue("branchName");
     const [project] = fields.getStringSelectValues("project");
@@ -54,60 +45,37 @@ const requestBranchModalSubmit: ModalSubmit = {
       return;
     }
 
-    // TODO: Replace this with a provisionBranch method that utilizes Clubs DB script
-    const existing = await checkExistingBranch(user.id);
-    const { url, isNewlyCreated } = existing
-      ? { url: existing.project, isNewlyCreated: false }
-      : { url: "examplekey", isNewlyCreated: true };
+    const collection = await getAuthorizedUsersCollection();
+    const brancher = getBrancherClient();
 
-    if (!isNewlyCreated) {
-      await interaction.reply({
-        content: `You have already been provisioned a branch with this name.\nThe URL is ||${url}||.`,
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
+    const doc = await collection.findOne({ discordUserId: discordUser.id });
+    if (!doc) {
+      throw new Error("Could not find user in authorizedUsers collection");
     }
 
-    const branch: Branch = {
-      name: branchName,
-      url,
-      project: project as Branch["project"],
-      createdAt: new Date(),
-    };
-
     try {
-      // Creates the user doc on first branch, appends on later ones.
-      const collection = await getBranchProvisionCollection();
-      const result = await collection.updateOne(
-        { userId: user.id },
-        {
-          $set: { [`branches.${branchName}`]: branch },
-          $setOnInsert: {
-            userId: user.id,
-            githubUserId: "",
-            githubUsername: "",
-          },
-        },
-        { upsert: true },
-      );
+      const neonUser = user({ githubUsername: doc.githubUsername });
+      const newBranch = await brancher.user.createBranch(neonUser, branchName);
 
-      if (!result.acknowledged) {
-        throw new Error("Error upserting provision to DB");
+      const existing = await checkExistingBranch(discordUser.id);
+      if (!existing) {
+        // TODO: Do something, lowkey this should be handled brancher side but whatever
       }
+
+      await interaction.reply({
+        content: `Your new provisioned branch is ||${newBranch}||.\nIf have experience any issues with the bot, please DM one of our leadership.`,
+        flags: MessageFlags.Ephemeral,
+      });
     } catch (error: any) {
-      console.error(`[ERROR] Failed provisioning for user ${user.username}`);
+      console.error(
+        `[ERROR] Failed provisioning for user ${discordUser.username}: ${error})`,
+      );
       await interaction.reply({
         content:
           "Something went wrong provisioning your branch. Please try again later.",
         flags: MessageFlags.Ephemeral,
       });
-      return; // don't tell the user it worked if the DB write failed
     }
-
-    await interaction.reply({
-      content: `Your new provisioned url is ||${url}||.\nHappy coding! If you have any question, please DM one of our leadership.`,
-      flags: MessageFlags.Ephemeral,
-    });
   },
 };
 
