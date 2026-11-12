@@ -100,3 +100,9 @@ export const PROJECTS = [
 ] as const satisfies Project[];
 
 export type ProjectValue = (typeof PROJECTS)[number]["value"];
+
+/**
+ * Custom error for users that have not registered with oauth.
+ * This error is checked so we don't crash the bot if a user is unauthorized
+ */
+export class NotAuthorizedError extends Error {}

@@ -1,4 +1,8 @@
-import type { Command, ModalSubmit } from "@/bot/interface.ts";
+import {
+  NotAuthorizedError,
+  type Command,
+  type ModalSubmit,
+} from "@/bot/interface.ts";
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
@@ -6,6 +10,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import BrancherDBClient from "./db-brancher/BrancherDBClient.ts";
 import NeonProviderClient from "./db-brancher/providers/Neon.ts";
 import { Branch } from "@neon/sdk";
+import {
+  user,
+  UserIdentifier,
+} from "./db-brancher/identifiers/UserIdentifier.ts";
+import { getAuthorizedUsersCollection } from "@/shared/db.ts";
+import { User } from "discord.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -82,4 +92,19 @@ export function getBrancherClient(): BrancherDBClient<Branch> {
   }
 
   return cachedBrancherClient;
+}
+
+export async function getAuthorizedNeonUser(
+  discordUser: User,
+): Promise<UserIdentifier> {
+  const collection = await getAuthorizedUsersCollection();
+  const doc = await collection.findOne({ discordUserId: discordUser.id });
+
+  if (!doc) {
+    throw new NotAuthorizedError(
+      `Discord user ${discordUser.id} is not authorized`,
+    );
+  }
+
+  return user({ githubUsername: doc.githubUsername });
 }
