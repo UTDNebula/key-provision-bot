@@ -1,8 +1,13 @@
-import { BranchMetadata, ModalSubmit, PROJECTS } from "@/bot/interface.ts";
+import {
+  BranchMetadata,
+  ModalSubmit,
+  NotAuthorizedError,
+  PROJECTS,
+} from "@/bot/interface.ts";
 import { getAuthorizedUsersCollection } from "@/shared/db.ts";
 import { MessageFlags, ModalSubmitInteraction } from "discord.js";
 import { user } from "../db-brancher/identifiers/UserIdentifier.ts";
-import { getBrancherClient } from "../utils.ts";
+import { getAuthorizedNeonUser, getBrancherClient } from "../utils.ts";
 // TODO: Add more logging to this script
 
 const MAX_BRANCHES_PER_USER = 5; // TODO: Also should be handled branch side?
@@ -44,16 +49,10 @@ const requestBranchModalSubmit: ModalSubmit = {
       return;
     }
 
-    const collection = await getAuthorizedUsersCollection();
-    const brancher = getBrancherClient();
-
-    const doc = await collection.findOne({ discordUserId: discordUser.id });
-    if (!doc) {
-      throw new Error("Could not find user in authorizedUsers collection");
-    }
-
     try {
-      const neonUser = user({ githubUsername: doc.githubUsername });
+      const brancher = getBrancherClient();
+
+      const neonUser = await getAuthorizedNeonUser(discordUser);
       const newBranch = await brancher.user.createBranch(neonUser, branchName);
 
       const existing = await checkExistingBranch(discordUser.id);
@@ -66,6 +65,18 @@ const requestBranchModalSubmit: ModalSubmit = {
         flags: MessageFlags.Ephemeral,
       });
     } catch (error: any) {
+      if (error instanceof NotAuthorizedError) {
+        console.warn(
+          `[WARN] User ${discordUser.username} is not authorized to provision a branch`,
+        );
+        await interaction.reply({
+          content:
+            "You don't have access to provision a branch. Please contact leadership if you think this is a mistake.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
       console.error(
         `[ERROR] Failed provisioning for user ${discordUser.username}: ${error})`,
       );
