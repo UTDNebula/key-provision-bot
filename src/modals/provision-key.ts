@@ -77,6 +77,9 @@ async function getAPIConfig(): Promise<APIConfig> {
   try {
     // The token is cached, so we can call function multiple times and still get same token
     const client = await auth.getClient();
+    console.log(
+      `[AUTH] Authenticating as: ${(client as any).email || "Unknown"}`,
+    );
     const response = await client.getAccessToken();
     if (!response.token) {
       throw new Error("Undefined access token");
@@ -129,6 +132,8 @@ async function prodCreateKey(
     },
   );
   if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[GCP ERROR] HTTP ${response.status}:`, errorBody);
     throw new Error(`HTTP error ${response.status} creating key!`);
   }
   const data = await response.json();
