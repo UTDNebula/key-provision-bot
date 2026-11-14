@@ -95,3 +95,43 @@ export async function getKeyProvisionCollection(): Promise<
   const client = await getMongoClient();
   return client.db("combinedDB").collection<KeyProvision>("keyProvisions");
 }
+
+/**
+ * Polls a Google Cloud long-running operation until it reports `done`.
+ */
+export async function pollOperation<T = any>(
+  baseUrl: string,
+  operationUrl: string,
+  accessToken: string,
+  projectId: string,
+  operationName: string,
+  pollIntervals = 5000,
+): Promise<T> {
+  let opDetails: any = {};
+  let attempt = 0;
+
+  while (!("done" in opDetails && opDetails.done === true)) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, pollIntervals));
+    }
+
+    const response = await fetch(`${baseUrl}/${operationUrl}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "x-goog-user-project": projectId,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `HTTP error ${response.status} polling: ${operationName}`,
+      );
+    }
+
+    opDetails = await response.json();
+    attempt++;
+  }
+
+  return opDetails;
+}

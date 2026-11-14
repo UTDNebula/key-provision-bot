@@ -48,3 +48,11 @@ export type KeyProvision = {
   encryptedKey: string;
   apiPurpose: string[];
 };
+
+/**
+ * Information about created key response from gcp
+ */
+export type CreatedKey = {
+  keyName: string;
+  keyString: string;
+};
