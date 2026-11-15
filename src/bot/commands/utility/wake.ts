@@ -5,6 +5,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import type { Command } from "@/bot/interface.ts";
+import { withSelectedLeadership } from "@/bot/guards.ts";
 
 /**
  * Command to go online.
@@ -14,17 +15,8 @@ const wakeCommand: Command = {
   data: new SlashCommandBuilder()
     .setName("wake")
     .setDescription("wake the key provision bot"),
-  async execute(interaction) {
+  execute: withSelectedLeadership(async (interaction) => {
     const bot = interaction.client.user;
-    const adminIds = process.env.BOT_ADMINS?.split(",") || [];
-
-    if (!adminIds.includes(interaction.user.id)) {
-      await interaction.reply({
-        content: "You are not allowed to use this command",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
 
     bot.setPresence({
       activities: [
@@ -35,7 +27,7 @@ const wakeCommand: Command = {
     await interaction.reply(
       "Hi everyone! I'm back and ready to provision key.",
     );
-  },
+  }),
 };
 
 export default wakeCommand;
