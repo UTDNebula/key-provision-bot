@@ -1,12 +1,11 @@
 import { withGithubVerified } from "@/bot/guards.ts";
-import { Command, PROJECTS } from "@/bot/interface.ts";
+import { Command } from "@/bot/interface.ts";
 import { getAuthorizedNeonUser, getBrancherClient } from "@/bot/utils.ts";
 import {
+  ActionRowBuilder,
   SlashCommandBuilder,
   StringSelectMenuBuilder,
-  ActionRowBuilder,
   StringSelectMenuOptionBuilder,
-  Interaction,
 } from "discord.js";
 
 const branchDeleteCommand: Command = {
@@ -22,7 +21,7 @@ const branchDeleteCommand: Command = {
       .setPlaceholder("Select a branch")
       .addOptions(
         // TODO: Im assuming if we filter based on notebook or clubs that
-        //  we will choose just filtering the branches as opposed to keeping them seperate
+        //  we will choose just filter by the branches as opposed to keeping them seperate with a modal
         branches.map((p) =>
           new StringSelectMenuOptionBuilder()
             .setLabel(p.name)

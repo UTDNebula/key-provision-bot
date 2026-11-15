@@ -67,7 +67,7 @@ export const isSelectedLeadership = async (
   interaction: ChatInputCommandInteraction,
 ) => {
   const adminIds = process.env.BOT_ADMINS?.split(",") || [];
-  return !adminIds.includes(interaction.user.id);
+  return adminIds.includes(interaction.user.id);
 };
 
 function buildLinkUrl(discordUserId: string): string {
