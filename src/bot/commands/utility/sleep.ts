@@ -5,6 +5,7 @@ import {
   PresenceUpdateStatus,
   SlashCommandBuilder,
 } from "discord.js";
+import { withSelectedLeadership } from "@/bot/guards.ts";
 import type { Command } from "@/bot/interface.ts";
 
 /**
@@ -17,7 +18,7 @@ const sleepCommand: Command = {
     .setDescription("Wake the key provision bot")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-  async execute(interaction) {
+  execute: withSelectedLeadership(async (interaction) => {
     const bot = interaction.client.user;
     const adminIds = process.env.BOT_ADMINS?.split(",") || [];
 
@@ -34,7 +35,7 @@ const sleepCommand: Command = {
       status: PresenceUpdateStatus.Invisible,
     });
     await interaction.reply("I'm going offline now. Goodbye everyone!");
-  },
+  }),
 };
 
 export default sleepCommand;
