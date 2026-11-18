@@ -28,9 +28,14 @@ jobs:
 
       - name: Run Prettier check
         run: npm run format:check
+
   cd:
     name: Deploy to GCP Compute Engine
+    needs: ci
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-develop
+      cancel-in-progress: false
 
     steps:
       - name: Deploy via SSH
@@ -39,14 +44,17 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
+          timeout: 60s
+          command_timeout: 10m
+          script_stop: true
           script: |
-            set -e
+            set -euo pipefail
 
             BOLD='\033[1m'
             BLUE='\033[1;34m'
             CYAN='\033[1;36m'
             GREEN='\033[1;32m'
-            YELLOW='\033[1;33m'
+            RED='\033[1;31m'
             RESET='\033[0m'
 
             title() {
@@ -55,11 +63,31 @@ jobs:
               printf "${CYAN}==================================================${RESET}\n\n"
             }
 
-            cd ~/key-provision-bot
+            REPO_DIR="/shared/key-provision-bot"
+            SERVICE="prod-key-provision-bot"
+
+            title "PREFLIGHT CHECKS"
+            echo "User:     $(whoami)"
+            echo "Repo dir: $REPO_DIR"
+            echo "Service:  $SERVICE"
+
+            if [ ! -d "$REPO_DIR" ]; then
+              printf "${BOLD}${RED}ERROR: %s does not exist${RESET}\n" "$REPO_DIR"
+              ls -la /shared 2>&1 || true
+              exit 1
+            fi
+
+            if [ ! -w "$REPO_DIR" ]; then
+              printf "${BOLD}${RED}ERROR: $(whoami) cannot write to %s${RESET}\n" "$REPO_DIR"
+              ls -ld "$REPO_DIR"
+              exit 1
+            fi
+
+            cd "$REPO_DIR"
 
             current_branch=$(git branch --show-current)
             if [ "$current_branch" != "develop" ]; then
-              printf "${BOLD}\033[1;31m Expected develop branch but found: %s${RESET}\n" "$current_branch"
+              printf "${BOLD}${RED}Expected develop branch but found: %s${RESET}\n" "$current_branch"
               exit 1
             fi
 
@@ -69,11 +97,11 @@ jobs:
             title "INSTALLING DEPENDENCIES"
             npm ci
 
-            title "RESTARTING DEV KEY PROVISION BOT"
-            sudo -n /usr/bin/systemctl restart dev-key-provision-bot
+            title "RESTARTING KEY PROVISION BOT"
+            sudo -n /usr/bin/systemctl restart "$SERVICE"
 
             title "SERVICE STATUS"
-            sudo -n /usr/bin/systemctl status dev-key-provision-bot --no-pager
+            sudo -n /usr/bin/systemctl status "$SERVICE" --no-pager
 
             printf "\n${GREEN}==================================================${RESET}\n"
             printf "${BOLD}${GREEN}  DEPLOYMENT COMPLETED SUCCESSFULLY${RESET}\n"
